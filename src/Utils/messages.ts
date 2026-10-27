@@ -41,6 +41,14 @@ import {
 	type MediaDownloadOptions
 } from './messages-media'
 import { shouldIncludeReportingToken } from './reporting-utils'
+import {
+	buildInteractiveMessage,
+	buildLegacyButtonsMessage,
+	collectNativeFlowButtons,
+	hasInteractiveContent,
+	wrapInteractiveMessage,
+	type MediaHeader
+} from './aeqm-buttons'
 
 type ExtractByKey<T, K extends PropertyKey> = T extends Record<K, any> ? T : never
 type RequireKey<T, K extends keyof T> = T & {
@@ -183,13 +191,17 @@ export const prepareWAMessageMedia = async (
 		)
 
 		const fileSha256B64 = fileSha256.toString('base64')
-		const { mediaUrl, directPath } = await options.upload(filePath, {
-			fileEncSha256B64: fileSha256B64,
-			mediaType: mediaType,
-			timeoutMs: options.mediaUploadTimeoutMs
-		})
-
-		await fs.unlink(filePath)
+		let mediaUrl: string
+		let directPath: string
+		try {
+			({ mediaUrl, directPath } = await options.upload(filePath, {
+				fileEncSha256B64: fileSha256B64,
+				mediaType,
+				timeoutMs: options.mediaUploadTimeoutMs
+			}))
+		} finally {
+			await fs.unlink(filePath).catch(() => undefined)
+		}
 
 		const obj = WAProto.Message.fromObject({
 			// todo: add more support here
@@ -392,11 +404,75 @@ function hasOptionalProperty<T, K extends PropertyKey>(obj: T, key: K): obj is W
 	return typeof obj === 'object' && obj !== null && key in obj && (obj as any)[key] !== null
 }
 
+/**
+ * [@aeqm/baileys] Messaggi con pulsanti / liste / bottoni interattivi.
+ * Vedi src/Utils/aeqm-buttons.ts per i formati accettati.
+ */
+const generateInteractiveContent = async (message: any, options: MessageContentGenerationOptions) => {
+	const buttons = collectNativeFlowButtons(message)
+	if (!buttons.length) {
+		throw new Boom('buttons/interactiveButtons/sections must contain at least one valid button', { statusCode: 400 })
+	}
+
+	// Header multimediale (image / video / document), opzionale.
+	const media: MediaHeader = {}
+	for (const kind of ['image', 'video', 'document'] as const) {
+		if (message[kind] !== undefined && message[kind] !== null) {
+			const mediaInput: any = { [kind]: message[kind] }
+			if (message.mimetype) mediaInput.mimetype = message.mimetype
+			if (message.fileName) mediaInput.fileName = message.fileName
+			if (message.jpegThumbnail) mediaInput.jpegThumbnail = message.jpegThumbnail
+			if (kind === 'video' && message.gifPlayback) mediaInput.gifPlayback = true
+			const prepared = await prepareWAMessageMedia(mediaInput, options)
+			if (kind === 'image') media.imageMessage = prepared.imageMessage
+			if (kind === 'video') media.videoMessage = prepared.videoMessage
+			if (kind === 'document') media.documentMessage = prepared.documentMessage
+			break
+		}
+	}
+
+	const body: string = (typeof message.text === 'string' && message.text) || (typeof message.caption === 'string' && message.caption) || ''
+	const mentions: string[] | undefined = Array.isArray(message.mentions) ? message.mentions : undefined
+
+	let content: Record<string, any>
+
+	if (message.buttonsMode === 'legacy') {
+		const legacy = buildLegacyButtonsMessage({
+			body,
+			footer: message.footer,
+			buttons,
+			media,
+			mentions,
+			contextInfo: message.contextInfo
+		})
+		content = { buttonsMessage: legacy }
+	} else {
+		const interactive = buildInteractiveMessage({
+			body,
+			footer: message.footer,
+			title: message.title,
+			subtitle: message.subtitle,
+			buttons,
+			media,
+			mentions,
+			contextInfo: message.contextInfo,
+			messageParamsJson: message.messageParamsJson
+		})
+		content = wrapInteractiveMessage(interactive)
+	}
+
+	return WAProto.Message.create(content as any)
+}
+
 export const generateWAMessageContent = async (
 	message: AnyMessageContent,
 	options: MessageContentGenerationOptions
 ) => {
 	let m: WAMessageContent = {}
+	if (hasInteractiveContent(message)) {
+		return generateInteractiveContent(message, options)
+	}
+
 	if (hasNonNullishProperty(message, 'text')) {
 		const extContent = { text: message.text } as WATextMessage
 
@@ -491,11 +567,11 @@ export const generateWAMessageContent = async (
 		m.pinInChatMessage = {}
 		m.messageContextInfo = {}
 
-		m.pinInChatMessage.key = message.pin
-		m.pinInChatMessage.type = message.type
+		m.pinInChatMessage.key = (message as any).pin
+		m.pinInChatMessage.type = (message as any).type
 		m.pinInChatMessage.senderTimestampMs = Date.now()
 
-		m.messageContextInfo.messageAddOnDurationInSecs = message.type === 1 ? message.time || 86400 : 0
+		m.messageContextInfo.messageAddOnDurationInSecs = (message as any).type === 1 ? (message as any).time || 86400 : 0
 	} else if (hasNonNullishProperty(message, 'buttonReply')) {
 		switch (message.type) {
 			case 'template':
@@ -568,13 +644,19 @@ export const generateWAMessageContent = async (
 			messageSecret: message.poll.messageSecret || randomBytes(32)
 		}
 
+		const isQuiz = message.poll.pollType === proto.Message.PollType.QUIZ
+		if (isQuiz && !message.poll.correctAnswer) throw new Boom('Quiz polls require correctAnswer', { statusCode: 400 })
+		if (isQuiz && !options.jid?.endsWith('@newsletter')) throw new Boom('Quiz polls are only supported for newsletters', { statusCode: 400 })
 		const pollCreationMessage = {
 			name: message.poll.name,
 			selectableOptionsCount: message.poll.selectableCount,
 			options: message.poll.values.map(optionName => ({ optionName }))
 		}
 
-		if (message.poll.toAnnouncementGroup) {
+		if (isQuiz) {
+			if (!message.poll.values.includes(message.poll.correctAnswer!)) throw new Boom('Quiz correctAnswer must match one of poll.values', { statusCode: 400 })
+			m.pollCreationMessageV5 = { ...pollCreationMessage, pollType: proto.Message.PollType.QUIZ, selectableOptionsCount: 1, correctAnswer: { optionName: message.poll.correctAnswer! } }
+		} else if (message.poll.toAnnouncementGroup) {
 			// poll v2 is for community announcement groups (single select and multiple)
 			m.pollCreationMessageV2 = pollCreationMessage
 		} else {
@@ -587,10 +669,14 @@ export const generateWAMessageContent = async (
 			}
 		}
 	} else if (hasNonNullishProperty(message, 'album')) {
+		if (Array.isArray(message.album)) throw new Boom('Album arrays are sent by sendMessage and cannot be generated as a standalone message', { statusCode: 400 })
 		m.albumMessage = {
 			expectedImageCount: message.album.expectedImageCount,
 			expectedVideoCount: message.album.expectedVideoCount
 		}
+	} else if (hasNonNullishProperty(message, 'keep')) {
+		if (message.type !== proto.KeepType.KEEP_FOR_ALL && message.type !== proto.KeepType.UNDO_KEEP_FOR_ALL) throw new Boom('Invalid Keep in Chat action', { statusCode: 400 })
+		m.keepInChatMessage = { key: message.keep, keepType: message.type, timestampMs: Date.now() }
 	} else if (hasNonNullishProperty(message, 'sharePhoneNumber')) {
 		m.protocolMessage = {
 			type: proto.Message.ProtocolMessage.Type.SHARE_PHONE_NUMBER
@@ -608,7 +694,7 @@ export const generateWAMessageContent = async (
 			}
 		}
 	} else {
-		m = await prepareWAMessageMedia(message, options)
+		m = await prepareWAMessageMedia(message as AnyMediaMessageContent, options)
 	}
 
 	if (hasOptionalProperty(message, 'viewOnce') && !!message.viewOnce) {

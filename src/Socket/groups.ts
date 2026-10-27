@@ -3,6 +3,7 @@ import { proto } from '../../WAProto/index.js'
 import type { GroupMetadata, GroupParticipant, ParticipantAction, SocketConfig, WAMessageKey } from '../Types'
 import { WAMessageAddressingMode, WAMessageStubType } from '../Types'
 import { generateMessageIDV2, unixTimestampSeconds } from '../Utils'
+import { normalizeParticipant } from '../Utils/aeqm-compat'
 import {
 	type BinaryNode,
 	getBinaryNodeChild,
@@ -367,14 +368,14 @@ export const extractGroupMetadata = (result: BinaryNode) => {
 		joinApprovalMode: !!getBinaryNodeChild(group, 'membership_approval_mode'),
 		memberAddMode,
 		participants: getBinaryNodeChildren(group, 'participant').map(({ attrs }) => {
-			// TODO: Store LID MAPPINGS
-			return {
+			// [@aeqm/baileys] normalizeParticipant garantisce id + lid + jid + phoneNumber
+			return normalizeParticipant({
 				id: attrs.jid!,
 				phoneNumber: isLidUser(attrs.jid) && isPnUser(attrs.phone_number) ? attrs.phone_number : undefined,
 				lid: isPnUser(attrs.jid) && isLidUser(attrs.lid) ? attrs.lid : undefined,
 				username: attrs.participant_username || attrs.username || undefined,
 				admin: (attrs.type || null) as GroupParticipant['admin']
-			}
+			}) as GroupParticipant
 		}),
 		ephemeralDuration: eph ? +eph : undefined
 	}

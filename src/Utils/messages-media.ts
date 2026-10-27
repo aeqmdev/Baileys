@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom'
-import { exec } from 'child_process'
+import { spawn } from 'child_process'
 import * as Crypto from 'crypto'
 import { once } from 'events'
 import { createReadStream, createWriteStream, promises as fs, WriteStream } from 'fs'
@@ -122,13 +122,15 @@ const extractVideoThumb = async (
 	size: { width: number; height: number }
 ) =>
 	new Promise<void>((resolve, reject) => {
-		const cmd = `ffmpeg -ss ${time} -i ${path} -y -vf scale=${size.width}:-1 -vframes 1 -f image2 ${destPath}`
-		exec(cmd, err => {
-			if (err) {
-				reject(err)
-			} else {
-				resolve()
-			}
+		const child = spawn('ffmpeg', ['-ss', time, '-i', path, '-y', '-vf', `scale=${size.width}:-1`, '-vframes', '1', '-f', 'image2', destPath], { stdio: ['ignore', 'ignore', 'pipe'] })
+		let stderr = ''
+		child.stderr?.on('data', (chunk: Buffer) => {
+			if (stderr.length < 16_384) stderr += chunk.toString('utf8').slice(0, 16_384 - stderr.length)
+		})
+		child.once('error', reject)
+		child.once('close', (code, signal) => {
+			if (code === 0) resolve()
+			else reject(new Error(`ffmpeg thumbnail extraction failed (${signal ?? `exit ${code}`}): ${stderr}`))
 		})
 	})
 
@@ -350,9 +352,10 @@ export async function generateThumbnail(
 			const buff = await fs.readFile(imgFilename)
 			thumbnail = buff.toString('base64')
 
-			await fs.unlink(imgFilename)
 		} catch (err) {
 			options.logger?.debug('could not generate video thumb: ' + err)
+		} finally {
+			await fs.unlink(imgFilename).catch(() => undefined)
 		}
 	}
 

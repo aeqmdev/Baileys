@@ -3,6 +3,7 @@ import { Boom } from '@hapi/boom'
 import { randomBytes } from 'crypto'
 import Long from 'long'
 import { proto } from '../../WAProto/index.js'
+import { enrichLegacyKeyFields } from '../Utils/aeqm-compat'
 import {
 	DEFAULT_CACHE_TTLS,
 	KEY_BUNDLE_TYPE,
@@ -1616,6 +1617,9 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 					await signalRepository.migrateSession(alt, primaryJid)
 				}
 			}
+
+			// [@aeqm/baileys] campi "legacy" senderPn / senderLid / participantLid sulla chiave
+			await enrichLegacyKeyFields(msg.key, lid => signalRepository.lidMapping.getPNForLID(lid))
 
 			await messageMutex.mutex(async () => {
 				await decrypt()

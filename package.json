@@ -1,11 +1,14 @@
 {
-  "name": "baileys",
+  "name": "@aeqm/baileys",
   "type": "module",
-  "version": "7.0.0-rc14",
-  "description": "A WebSockets library for interacting with WhatsApp Web",
+  "version": "1.0.0",
+  "description": "Fork di Baileys (WhiskeySockets 7.0.0-rc14) con pulsanti e compatibilità ChatUnity per bot come Hastur",
   "keywords": [
     "whatsapp",
-    "automation"
+    "baileys",
+    "automation",
+    "buttons",
+    "bot"
   ],
   "homepage": "https://github.com/WhiskeySockets/Baileys/",
   "repository": {
@@ -37,8 +40,11 @@
     "preinstall": "node ./engine-requirements.js",
     "release": "release-it",
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest --testMatch '**/*.test.ts'",
-    "test:e2e": "NODE_TLS_REJECT_UNAUTHORIZED=0 node --experimental-vm-modules ./node_modules/.bin/jest --runInBand --forceExit --testMatch '**/*.test-e2e.ts'",
-    "update:version": "tsx ./scripts/update-version.ts"
+    "test:e2e": "npm run test:e2e:mock && npm run test:e2e:live",
+    "test:e2e:mock": "NODE_TLS_REJECT_UNAUTHORIZED=0 node --experimental-vm-modules ./node_modules/.bin/jest --runInBand --forceExit --testMatch '**/*.test-e2e.ts' --testPathIgnorePatterns=fetch-wa-web-version",
+    "test:e2e:live": "node --experimental-vm-modules ./node_modules/.bin/jest --runInBand --forceExit --testMatch '**/fetch-wa-web-version.test-e2e.ts'",
+    "update:version": "tsx ./scripts/update-version.ts",
+    "selftest": "tsx ./scripts/aeqm-selftest.ts"
   },
   "dependencies": {
     "@cacheable/node-cache": "^1.4.0",
@@ -134,6 +140,9 @@
   },
   "packageManager": "yarn@4.9.2",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

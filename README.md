@@ -1,28 +1,246 @@
-<h1 align='center'><img alt="Baileys logo" src="https://raw.githubusercontent.com/WhiskeySockets/Baileys/refs/heads/master/Media/logo.png" height="75"/></h1>
+# @aeqm/baileys
 
-<div align='center'>Baileys is a WebSockets-based TypeScript library for interacting with the WhatsApp Web API.</div>
+Fork personale di [Baileys](https://github.com/WhiskeySockets/Baileys) (libreria TypeScript basata su WebSocket per WhatsApp Web), costruita sulla versione upstream **7.0.0-rc14**.
+Aggiunge pulsanti, liste e messaggi interattivi e un livello di compatibilità pensato per i bot scritti per le fork ChatUnity (es. Hastur).
+Licenza MIT, come l'originale.
 
+> [!IMPORTANT]
+> **Questo non è il pacchetto upstream.** Il pacchetto di questa fork si chiama `@aeqm/baileys`.
+> Non vanno usati `baileys` né `@aeqm/baileys`: sono il progetto originale, senza le funzioni descritte qui sotto.
+> Dopo la sezione della fork trovi la guida all'uso derivata dal README upstream (in inglese), con gli import adattati a `@aeqm/baileys`.
+> I link a `baileys.wiki` puntano alla documentazione upstream: per i tipi della fork vale il codice in `src/Types`.
+
+## Indice della fork
+
+- [Cosa aggiunge](#cosa-aggiunge-rispetto-a-baileys-upstream)
+- [Requisiti e installazione](#requisiti-e-installazione)
+- [Configurazione](#configurazione-aeqm)
+- [Compatibilità `legacyParticipants`](#compatibilità-legacyparticipants)
+- [Campi LID/PN e helper](#campi-lidpn-e-helper)
+- [Pin](#pin-fork)
+- [Pulsanti, liste e messaggi interattivi](#pulsanti-liste-e-messaggi-interattivi)
+- [Sviluppo e test](#sviluppo-e-test)
+- [Stato di verifica](#stato-di-verifica)
+- [Crediti e differenze rispetto a upstream](#crediti-e-differenze-rispetto-a-upstream)
+
+## Cosa aggiunge rispetto a Baileys upstream
+
+| Funzione | Dettaglio |
+|---|---|
+| Pulsanti | `sendMessage(jid, { text, footer, buttons: [{ buttonId, buttonText: { displayText } }] })`, anche con `image`/`video`/`document` |
+| Pulsanti estesi | `interactiveButtons`: `reply`, `url`, `copy`, `call`, `list` o formato grezzo `{ name, buttonParamsJson }` |
+| Liste | `{ text, buttonText: 'Apri', sections: [{ title, rows: [{ title, description, rowId }] }] }` |
+| Chiave messaggio | `m.key.senderPn`, `senderLid`, `participantLid` |
+| Helper | `sock.getPNById(lid)`, `sock.getLIDById(pn)` |
+| Partecipanti di gruppo | ogni partecipante in `groupMetadata` ha `id`, `lid`, `jid`, `phoneNumber` |
+| `group-participants.update` | `participants` = array di JID stringa; i dati completi in `participantsInfo` (vedi sotto) |
+| Pin | accetta `{ pin: { key, type }, time }` oltre alla forma ufficiale |
+| Utility | `getButtonReplyId(message)` |
+
+## Requisiti e installazione
+
+- Node.js `>= 20.19.0` (come da `engines`).
+- La libreria è solo ESM. Da un bot CommonJS `require('@aeqm/baileys')` funziona con Node `>= 20.19` o `>= 22.12`, dove `require()` di moduli ESM è abilitato.
+- Il repository usa Yarn 4 tramite Corepack (`corepack enable`).
+
+Il pacchetto distribuito contiene la cartella `lib/`, generata dalla build: **non è nel repository**. Prima di usare la fork da una cartella locale va quindi compilata.
+
+Da cartella locale, tramite tarball (consigliato, `prepack` esegue la build):
+
+```bash
+cd path/to/aeqm-baileys
+yarn install
+npm pack                       # crea aeqm-baileys-<versione>.tgz
+cd path/to/il-tuo-bot
+npm install path/to/aeqm-baileys/aeqm-baileys-<versione>.tgz
+```
+
+Da cartella locale, tramite collegamento diretto (richiede di aver già eseguito `yarn install && yarn build` nella cartella della fork):
+
+```bash
+npm install path/to/aeqm-baileys
+```
+
+Da Git (la build parte da sola grazie allo script `prepare`):
+
+```bash
+npm install git+<URL-DEL-REPOSITORY-DELLA-FORK>
+```
+
+`<URL-DEL-REPOSITORY-DELLA-FORK>` va sostituito con l'URL reale del repository quando è definito: `homepage` e `repository` in `package.json` puntano ancora a upstream e vanno aggiornati insieme.
+
+Se in futuro il pacchetto verrà pubblicato su npm con lo scope `@aeqm`, l'installazione sarà `npm install @aeqm/baileys`. Fino ad allora non assumere che sia disponibile sul registro.
+
+Nel codice:
+
+```ts
+import makeWASocket from '@aeqm/baileys'
+```
+
+### Migrazione da `@chatunity/baileys`
+
+Nel bot sostituisci `@chatunity/baileys` con `@aeqm/baileys` (`package.json`, `index.js`, `lib/pair.js`, `lib/message-utils.js`, `lib/media-moderation.js`). La libreria non stampa nessun banner all'avvio.
+
+## Configurazione `aeqm`
+
+Le compatibilità sono attive per default e si regolano da `makeWASocket`:
+
+```ts
+const sock = makeWASocket({
+    auth: state,
+    aeqm: {
+        legacyParticipants: true,   // group-participants.update -> participants: string[]
+        legacyPin: true,            // sendMessage({ pin: { key, type }, time })
+        lidHelpers: true,           // sock.getPNById / sock.getLIDById
+        buttonsMode: 'native_flow'  // modalità predefinita dei pulsanti: 'native_flow' | 'legacy'
+    }
+})
+```
+
+| Opzione | Default | Con `false` |
+|---|---|---|
+| `legacyParticipants` | `true` | gli eventi restano nella forma upstream |
+| `legacyPin` | `true` | la forma annidata `{ pin: { key, type } }` non viene più riscritta |
+| `lidHelpers` | `true` | `getPNById` e `getLIDById` non vengono aggiunti al socket |
+| `buttonsMode` | `'native_flow'` | (non booleana) vedi la sezione sui pulsanti |
+
+Per disattivare una compatibilità passa `false` in modo esplicito: le opzioni omesse prendono il default, ma un valore `undefined` passato apposta lo sostituisce e disattiva l'opzione.
+
+## Compatibilità `legacyParticipants`
+
+Upstream emette `group-participants.update` con `participants` come array di **oggetti** partecipante.
+Le fork ChatUnity lo emettono come array di **JID stringa**, ed è ciò che si aspettano i bot scritti per esse.
+
+Con `legacyParticipants` attivo (default) il payload che arriva ai tuoi listener è:
+
+```ts
+sock.ev.on('group-participants.update', ({ id, author, action, participants, participantsInfo }) => {
+    // participants:     ['111@lid', '39333@s.whatsapp.net']          <- stringhe (l'`id` di ogni partecipante)
+    // participantsInfo: [{ id, lid, jid, phoneNumber, admin, ... }]  <- oggetti completi, normalizzati
+})
+```
+
+- `participants` contiene l'`id` di ciascun partecipante. Segue l'addressing mode del gruppo: in un gruppo LID sono `@lid`, non numeri di telefono. Per confrontare con un numero usa `participantsInfo[i].jid` (o `phoneNumber`), oppure `sock.getPNById(...)`.
+- `participantsInfo` contiene gli oggetti originali, normalizzati con `lid`, `jid` e `phoneNumber` quando sono ricavabili dai dati dell'evento. Se il numero di un partecipante LID non è presente nell'evento, `jid` e `phoneNumber` restano non valorizzati: la fork non fa richieste di rete per ricavarli.
+- Gli altri campi (`id`, `author`, `authorPn`, `authorUsername`, `action`) non cambiano. Il payload emesso non viene modificato: la trasformazione produce una copia.
+- Vale per i listener registrati con `sock.ev.on(...)` e per gli handler di `sock.ev.process(...)`. Gli altri eventi non vengono toccati.
+- Non dipende da questa opzione la normalizzazione dei partecipanti restituiti da `groupMetadata` e simili: hanno sempre `id`, `lid`, `jid` e `phoneNumber` quando noti.
+
+**Disattivarla**:
+
+```ts
+const sock = makeWASocket({ auth: state, aeqm: { legacyParticipants: false } })
+// participants: oggetti, come in Baileys upstream; participantsInfo non è presente
+```
+
+**TypeScript.** I tipi pubblici descrivono la forma upstream (`participants: GroupParticipant[]`) e dichiarano `participantsInfo` come opzionale. Con il default attivo, a runtime `participants` è invece `string[]`: in un progetto TypeScript conviene impostare `legacyParticipants: false` oppure leggere `participantsInfo`.
+
+**Perché il default è `true`.** La fork esiste per essere sostituita a `@chatunity/baileys` nei bot che si aspettano le stringhe: con il default a `false` quei bot si rompono senza modifiche. Il costo è l'incongruenza con i tipi per i progetti TypeScript, che hanno comunque la via d'uscita descritta sopra. Il default andrebbe riconsiderato se la fork smettesse di servire principalmente bot di quel tipo.
+
+## Campi LID/PN e helper
+
+Sui messaggi ricevuti da altri (non sui tuoi) la chiave contiene, quando ricavabili:
+
+- `key.senderLid`, `key.participantLid`: il LID del mittente;
+- `key.senderPn`: il JID del numero di telefono del mittente.
+
+Sono derivati da `participant`/`participantAlt` nei gruppi e da `remoteJid`/`remoteJidAlt` nelle chat private. Se manca il numero di un mittente `@lid`, viene cercato nella mappatura LID↔numero già salvata **in locale** (nessuna richiesta di rete durante la ricezione). Un campo già presente non viene sovrascritto.
+
+```ts
+await sock.getPNById('111@lid')                      // '39333@s.whatsapp.net' | null
+await sock.getLIDById('39333@s.whatsapp.net')        // '111@lid' | null
+```
+
+- Accettano JID con o senza device (`111:7@lid`) e restituiscono sempre JID senza device.
+- Un JID già del tipo richiesto viene restituito così com'è.
+- Restituiscono `null` se il JID non è un utente (per esempio un gruppo) o se la mappatura locale non lo conosce.
+- Con `lidHelpers: false` non vengono aggiunti. Nei tipi sono opzionali per lo stesso motivo.
+
+## Pin (fork)
+
+Il tipo `type` è `proto.PinInChat.Type`: `1` fissa il messaggio per tutti, `2` lo rimuove (`0` è `UNKNOWN_TYPE`).
+`time` è in secondi: `86400` (24 ore), `604800` (7 giorni), `2592000` (30 giorni).
+
+```ts
+// forma ufficiale
+await sock.sendMessage(jid, { pin: message.key, type: 1, time: 604800 })
+
+// forma delle fork ChatUnity (con legacyPin attivo, default)
+await sock.sendMessage(jid, { pin: { key: message.key, type: 1 }, time: 604800 })
+```
+
+La forma annidata viene riscritta in quella ufficiale prima dell'invio. Se manca, `type` vale `1`; se `time` è presente sia fuori sia dentro `pin`, vince quello esterno.
+
+## Pulsanti, liste e messaggi interattivi
+
+Formati accettati da `sendMessage(jid, content)`:
+
+```ts
+// 1) quick reply in stile ChatUnity (anche con image / video / document come intestazione)
+await sock.sendMessage(jid, {
+    text: 'Scegli',
+    footer: 'piè di pagina',
+    buttons: [{ buttonId: '.menu admin', buttonText: { displayText: 'Admin' } }]
+})
+
+// 2) pulsanti interattivi estesi
+await sock.sendMessage(jid, {
+    text: 'Scegli',
+    interactiveButtons: [
+        { type: 'reply', text: 'Ok',     id: '.menu' },
+        { type: 'url',   text: 'Sito',   url: 'https://example.com' },
+        { type: 'copy',  text: 'Copia',  code: 'ABC123' },
+        { type: 'call',  text: 'Chiama', phone: '+39...' },
+        { type: 'list',  text: 'Scegli', sections: [{ title: 'A', rows: [{ title: 'r', rowId: 'id1' }] }] },
+        { name: 'quick_reply', buttonParamsJson: '{"display_text":"x","id":"y"}' } // formato grezzo
+    ]
+})
+
+// 3) lista (menu a tendina)
+await sock.sendMessage(jid, {
+    text: 'Menu',
+    buttonText: 'Apri',
+    sections: [{ title: 'Sezione', rows: [{ title: 'Voce', description: 'dettaglio', rowId: 'id1' }] }]
+})
+```
+
+- Conversione: `reply`/`quick_reply` → `quick_reply`; `url` → `cta_url`; `copy` → `cta_copy`; `call` → `cta_call`; `list` e `sections` → `single_select`.
+- `buttonsMode: 'native_flow'` (default) invia un messaggio interattivo `nativeFlowMessage`. `'legacy'` usa il vecchio `buttonsMessage`, che contiene **solo** i pulsanti quick reply. Si può impostare per tutto il socket (`aeqm.buttonsMode`) o per singolo messaggio (`buttonsMode` nel contenuto, che ha la precedenza).
+- Per leggere quale pulsante è stato premuto: `getButtonReplyId(message.message)` restituisce l'id da `buttonsResponseMessage`, `templateButtonReplyMessage`, `listResponseMessage` o `interactiveResponseMessage`, oppure `null`.
+
+## Sviluppo e test
+
+```bash
+corepack enable
+yarn install
+yarn build         # compila in lib/
+yarn lint          # tsc + ESLint (Prettier incluso)
+yarn test          # test unitari e d'integrazione (Jest)
+yarn selftest      # script di verifica rapida delle parti pure della fork
+yarn test:e2e      # end-to-end contro il server mock "bartender"
+```
+
+**TLS nei test end-to-end.** Il mock espone un certificato autofirmato e il repository non contiene il certificato da considerare attendibile. I test che parlano col mock devono quindi saltare la verifica per quella connessione. Gli helper in `src/__tests__/e2e/helpers` lo fanno già con un `Agent` dedicato, ma il download dei media usa il `fetch` nativo di Node, che ignora gli `Agent` HTTPS: per questo lo script `test:e2e:mock` imposta `NODE_TLS_REJECT_UNAUTHORIZED=0` per quel solo processo. Il test che contatta il vero `web.whatsapp.com` (`fetch-wa-web-version`) gira a parte, in `test:e2e:live`, **con la verifica TLS attiva**. Nessun codice di runtime della libreria disattiva la verifica TLS. Se il certificato del mock diventa disponibile, si può sostituire la variabile con `NODE_EXTRA_CA_CERTS`.
+
+## Stato di verifica
+
+- I **pulsanti** (quick reply, pulsanti interattivi, liste) sono stati verificati manualmente su WhatsApp dal maintainer della fork. Come vengono mostrati dipende comunque dal server e dal client WhatsApp e può cambiare.
+- Il resto del livello di compatibilità (eventi dei partecipanti, campi LID/PN, helper, pin) è coperto da test automatici (`yarn test`, `yarn selftest`), non da una verifica dichiarata su WhatsApp reale.
+- I test dei pulsanti nel repository controllano solo che documentazione e tipi corrispondano alle funzioni di conversione, non il rendering su WhatsApp.
+
+## Crediti e differenze rispetto a upstream
+
+Baileys è opera di Rajeh Taher, dei contributori e della community WhiskeySockets (licenza MIT, vedi [LICENSE](LICENSE)). Questa fork non è affiliata né approvata da loro.
+Le sezioni "supporto" e "sponsor" del progetto originale riguardano upstream e non questa fork. Per questioni sul codice originale: [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) e <https://baileys.wiki>.
+Cronologia delle modifiche della fork: [CHANGELOG_AEQM.md](CHANGELOG_AEQM.md).
+
+---
+
+# Guida all'uso (derivata dal README di Baileys upstream)
 
 > [!CAUTION]
-> NOTICE OF BREAKING CHANGE.
->
-> As of 7.0.0, multiple breaking changes were introduced into the library.
->
-> Please check out https://whiskey.so/migrate-latest for more information.
+> Dalla 7.0.0 upstream ha introdotto diverse modifiche incompatibili: vedi https://whiskey.so/migrate-latest.
 
-# Important Note
-This is a temporary README.md, the new guide is in development and will this file will be replaced with .github/README.md (already a default on GitHub).
-
-New guide link: https://baileys.wiki
-
-# Get Support
-
-If you'd like business to enterprise-level support from Rajeh, the current maintainer of Baileys, you can book a video chat. Book a 1 hour time slot by contacting him on Discord or pre-ordering [here](https://purpshell.dev/book). The earlier you pre-order the better, as his time slots usually fill up very quickly. He offers immense value per hour and will answer all your questions before the time runs out.
-
-If you are a business, we encourage you to contribute back to the high development costs of the project and to feed the maintainers who dump tens of hours a week on this. You can do so by booking meetings or sponsoring below. All support, even in bona fide / contribution hours, is welcome by businesses of all sizes. This is not condoning or endorsing businesses to use the library. See the Disclaimer below.
-
-# Sponsor
-If you'd like to financially support this project, you can do so by supporting the current maintainer [here](https://purpshell.dev/sponsor).
 
 # Disclaimer
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with WhatsApp or any of its subsidiaries or its affiliates.
@@ -38,41 +256,19 @@ Use at your own discretion. Do not spam people with this. We discourage any stal
 - Baileys supports interacting with the multi-device & web versions of WhatsApp.
 - Thank you to [@pokearaujo](https://github.com/pokearaujo/multidevice) for writing his observations on the workings of WhatsApp Multi-Device. Also, thank you to [@Sigalor](https://github.com/sigalor/whatsapp-web-reveng) for writing his observations on the workings of WhatsApp Web and thanks to [@Rhymen](https://github.com/Rhymen/go-whatsapp/) for the __go__ implementation.
 
-> [!IMPORTANT]
-> The original repository had to be removed by the original author - we now continue development in this repository here.
-This is the only official repository and is maintained by the community.
-> **Join the Discord [here](https://discord.gg/WeJM5FP9GG)**
-
 ## Example
 
 Do check out & run [example.ts](Example/example.ts) to see an example usage of the library.
 The script covers most common use cases.
 To run the example script, download or clone the repo and then type the following in a terminal:
-1. ``` cd path/to/Baileys ```
+1. ``` cd path/to/aeqm-baileys ```
 2. ``` yarn ```
 3. ``` yarn example ```
 
-## Install
-
-Use the stable version:
-```
-yarn add @whiskeysockets/baileys
-```
-
-Use the edge version (no guarantee of stability, but latest fixes + features)
-```
-yarn add github:WhiskeySockets/Baileys
-```
-
-Then import your code using:
-```ts
-import makeWASocket from '@whiskeysockets/baileys'
-```
-
 # Links
 
-- [Discord](https://discord.gg/WeJM5FP9GG)
-- [Docs](https://baileys.wiki/docs/intro/)
+- [Documentazione upstream](https://baileys.wiki/docs/intro/)
+- [Discord upstream](https://discord.gg/WeJM5FP9GG)
 
 # Index
 
@@ -195,7 +391,7 @@ WhatsApp provides a multi-device API that allows Baileys to be authenticated as 
 > You can customize browser name if you connect with **QR-CODE**, with `Browser` constant, we have some browsers config, **see the [BrowsersMap type alias](https://baileys.wiki/docs/api/type-aliases/BrowsersMap/)**
 
 ```ts
-import makeWASocket from '@whiskeysockets/baileys'
+import makeWASocket from '@aeqm/baileys'
 
 const sock = makeWASocket({
     // can provide additional config here
@@ -215,7 +411,7 @@ If the connection is successful, you will see a QR code printed on your terminal
 The phone number can't have `+` or `()` or `-`, only numbers, you must provide country code
 
 ```ts
-import makeWASocket from '@whiskeysockets/baileys'
+import makeWASocket from '@aeqm/baileys'
 
 const sock = makeWASocket({
     // can provide additional config here
@@ -288,7 +484,7 @@ You obviously don't want to keep scanning the QR code every time you want to con
 
 So, you can load the credentials to log back in:
 ```ts
-import makeWASocket, { useMultiFileAuthState } from '@whiskeysockets/baileys'
+import makeWASocket, { useMultiFileAuthState } from '@aeqm/baileys'
 
 const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys')
 
@@ -331,7 +527,7 @@ sock.ev.on('messages.upsert', ({ messages }) => {
 > For reliable serialization of the authentication state, especially when storing as JSON, always use the BufferJSON utility.
 
 ```ts
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
+import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@aeqm/baileys'
 import { Boom } from '@hapi/boom'
 
 async function connectToWhatsApp () {
@@ -405,43 +601,28 @@ sock.ev.on('messages.update', event => {
 
 ## Implementing a Data Store
 
-- Baileys does not come with a defacto storage for chats, contacts, or messages. However, a simple in-memory implementation has been provided. The store listens for chat updates, new messages, message updates, etc., to always have an up-to-date version of the data.
+- Baileys does not come with a defacto storage for chats, contacts, or messages. Earlier versions shipped `makeInMemoryStore`; **it does not exist in this version** (7.x), so build your own store on top of the events.
 
 > [!IMPORTANT]
-> I highly recommend building your own data store, as storing someone's entire chat history in memory is a terrible waste of RAM.
+> Storing someone's entire chat history in memory is a terrible waste of RAM: persist what you need in a database.
 
-It can be used as follows:
+A minimal pattern, keeping the messages you receive:
 
 ```ts
-import makeWASocket, { makeInMemoryStore } from '@whiskeysockets/baileys'
-// the store maintains the data of the WA connection in memory
-// can be written out to a file & read from it
-const store = makeInMemoryStore({ })
-// can be read from a file
-store.readFromFile('./baileys_store.json')
-// saves the state to a file every 10s
-setInterval(() => {
-    store.writeToFile('./baileys_store.json')
-}, 10_000)
+import makeWASocket from '@aeqm/baileys'
+
+const messages = new Map<string, unknown>() // replace with your own storage
 
 const sock = makeWASocket({ })
-// will listen from this socket
-// the store can listen from a new socket once the current socket outlives its lifetime
-store.bind(sock.ev)
-
-sock.ev.on('chats.upsert', () => {
-    // can use 'store.chats' however you want, even after the socket dies out
-    // 'chats' => a KeyedDB instance
-    console.log('got chats', store.chats.all())
+sock.ev.on('messages.upsert', ({ messages: upserted }) => {
+    for (const msg of upserted) {
+        if (msg.key.id) messages.set(msg.key.id, msg.message)
+    }
 })
 
-sock.ev.on('contacts.upsert', () => {
-    console.log('got contacts', Object.values(store.contacts))
-})
-
+// e.g. provide it to the socket so retries and poll votes can be handled
+// const sock = makeWASocket({ getMessage: async key => messages.get(key.id!) })
 ```
-
-The store also provides some simple functions such as `loadMessages` that utilize the store to speed up data retrieval.
 
 ## Whatsapp IDs Explain
 
@@ -551,8 +732,9 @@ await sock.sendMessage(
 ```
 
 #### Pin Message
-- You need to pass the key of message, you can retrieve from [store](#implementing-a-data-store) or use a [key](https://baileys.wiki/docs/api/type-aliases/WAMessageKey/) object
+- You need to pass the key of message, you can retrieve from your own store or use a [key](https://baileys.wiki/docs/api/type-aliases/WAMessageKey/) object
 
+- `type` is `1` to pin and `2` to unpin (`0` is `UNKNOWN_TYPE`)
 - Time can be:
 
 | Time  | Seconds        |
@@ -565,14 +747,15 @@ await sock.sendMessage(
 await sock.sendMessage(
     jid,
     {
-        pin: {
-            type: 1, // 0 to remove
-            time: 86400
-            key: message.key
-        }
+        pin: message.key,
+        type: 1, // 2 to unpin
+        time: 86400
     }
 )
 ```
+
+> [!NOTE]
+> `@aeqm/baileys` also accepts `{ pin: { key, type }, time }`, see [Pin (fork)](#pin-fork).
 
 #### Poll Message
 ```ts
@@ -599,7 +782,7 @@ await sock.sendMessage(
 await sock.sendMessage(
     jid,
     {
-        text: 'Hi, this was sent using https://github.com/whiskeysockets/baileys'
+        text: 'Hi, this was sent using @aeqm/baileys'
     }
 )
 ```
@@ -729,7 +912,7 @@ await sock.sendMessage(jid, {
 If you want to save the media you received
 ```ts
 import { createWriteStream } from 'fs'
-import { downloadMediaMessage, getContentType } from '@whiskeysockets/baileys'
+import { downloadMediaMessage, getContentType } from '@aeqm/baileys'
 
 sock.ev.on('messages.upsert', async ({ [m] }) => {
     if (!m.message) return // if there is no text or media message
@@ -1288,7 +1471,7 @@ sock.ws.on('CB:edge_routing,id:abcd,routing_info', (node: BinaryNode) => { })
 ```
 
 # License
-Copyright (c) 2026 Rajeh Taher/WhiskeySockets
+Copyright (c) 2025 Rajeh Taher/WhiskeySockets
 
 Licensed under the MIT License:
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1310,3 +1493,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Thus, the maintainers of the project can't be held liable for any potential misuse of this project.
+
+## API aggiuntive della fork @aeqm/baileys
+
+La fork mantiene il supporto esistente a `mentionAll`, inviti di gruppo, prodotti, eventi, sondaggi base, helper LID/PN e messaggi interattivi. Le API dei pulsanti e delle liste già presenti restano invariate.
+
+### Album immagini e video
+
+```ts
+await sock.sendMessage(jid, {
+  album: [
+    { image: { url: './foto.jpg' }, caption: 'Foto' },
+    { video: { url: './clip.mp4' }, caption: 'Clip' }
+  ]
+})
+```
+
+Servono almeno due elementi, ciascuno immagine o video. La libreria invia il contenitore e associa i media ai protobuf album già presenti. Restano disponibili anche `albumParentKey`, `expectedImageCount` e `expectedVideoCount` per gli usi di basso livello.
+
+### Keep in Chat
+
+```ts
+await sock.sendMessage(jid, { keep: message.key, type: proto.KeepType.KEEP_FOR_ALL })
+```
+
+Usa `proto.KeepType.KEEP_FOR_ALL` per conservare il messaggio e `proto.KeepType.UNDO_KEEP_FOR_ALL` per rimuovere la conservazione.
+
+### Sondaggi quiz
+
+Sono esposti `pollType` e `correctAnswer`, confermati da WAProto. Il quiz richiede che la risposta corretta corrisponda a un’opzione e può essere inviato a una newsletter. Il protobuf locale non conferma un campo di scadenza per i sondaggi; le opzioni di voto non rappresentate dai tipi non sono esposte.
+
+L’upload media raw per newsletter era già presente. Sticker pack, rich response strutturate e card/carousel non sono esposti: le API della fork di riferimento non bastano da sole a convalidare i payload contro il sorgente locale.
+
+Le miniature video richiedono FFmpeg nel `PATH`; il processo riceve argomenti separati e la diagnostica stderr raccolta è limitata a 16 KiB.

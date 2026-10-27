@@ -14,7 +14,11 @@ export * from './Mex'
 import type { AuthenticationState } from './Auth'
 import type { SocketConfig } from './Socket'
 
-export type UserFacingSocketConfig = Partial<SocketConfig> & { auth: AuthenticationState }
+export type UserFacingSocketConfig = Partial<SocketConfig> & {
+	auth: AuthenticationState
+	/** [@aeqm/baileys] opzioni del livello di compatibilità (vedi Socket/aeqm.ts) */
+	aeqm?: import('../Socket/aeqm').AeqmConfig
+}
 
 export type BrowsersMap = {
 	ubuntu(browser: string): [string, string, string]

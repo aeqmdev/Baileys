@@ -21,6 +21,10 @@ export type WAMessageKey = proto.IMessageKey & {
 	remoteJidAlt?: string
 	remoteJidUsername?: string
 	participantAlt?: string
+	/** [@aeqm/baileys] campi compatibili con le fork ChatUnity */
+	senderPn?: string
+	senderLid?: string
+	participantLid?: string
 	participantUsername?: string
 	server_id?: string
 	addressingMode?: string
@@ -141,7 +145,12 @@ export type PollMessageOptions = {
 	/** 32 byte message secret to encrypt poll selections */
 	messageSecret?: Uint8Array
 	toAnnouncementGroup?: boolean
+	/** Quiz polls require a correct answer and are limited to newsletter JIDs. */
+	pollType?: proto.Message.PollType
+	correctAnswer?: string
 }
+
+export type KeepInChatMessageOptions = { keep: WAMessageKey; type: proto.KeepType }
 
 export type EventMessageOptions = {
 	name: string
@@ -229,6 +238,54 @@ export type WASendableProduct = Omit<proto.Message.ProductMessage.IProductSnapsh
 	productImage: WAMediaUpload
 }
 
+
+/** [@aeqm/baileys] pulsante "quick reply" in stile ChatUnity/Baileys legacy */
+export type AeqmLegacyButton = {
+	buttonId: string
+	buttonText: { displayText: string }
+	type?: number
+}
+
+/** [@aeqm/baileys] pulsanti interattivi estesi (vedi Utils/aeqm-buttons.ts) */
+export type AeqmInteractiveButton =
+	| { type: 'reply' | 'quick_reply'; text: string; id: string }
+	| { type: 'url' | 'cta_url'; text: string; url: string; merchantUrl?: string }
+	| { type: 'copy' | 'cta_copy'; text: string; code: string }
+	| { type: 'call' | 'cta_call'; text: string; phone: string }
+	| { type: 'list' | 'single_select'; text: string; sections: AeqmListSection[] }
+	| { name: string; buttonParamsJson: string }
+
+export type AeqmListSection = {
+	title?: string
+	highlight_label?: string
+	rows: { title: string; description?: string; rowId?: string; id?: string; header?: string }[]
+}
+
+/** [@aeqm/baileys] messaggio con pulsanti / lista / media + pulsanti */
+export type AeqmInteractiveContent = {
+	text?: string
+	caption?: string
+	footer?: string
+	title?: string
+	subtitle?: string
+	buttons?: AeqmLegacyButton[]
+	interactiveButtons?: AeqmInteractiveButton[]
+	/** lista a tendina: richiede anche buttonText (etichetta del pulsante che apre la lista) */
+	sections?: AeqmListSection[]
+	buttonText?: string
+	/** 'native_flow' (default) oppure 'legacy' (vecchio buttonsMessage) */
+	buttonsMode?: 'native_flow' | 'legacy'
+	image?: WAMediaUpload
+	video?: WAMediaUpload
+	document?: WAMediaUpload
+	mimetype?: string
+	fileName?: string
+	gifPlayback?: boolean
+	jpegThumbnail?: string
+} & Mentionable &
+	Contextable &
+	ViewOnce
+
 export type AnyRegularMessageContent = (
 	| ({
 			text: string
@@ -244,9 +301,10 @@ export type AnyRegularMessageContent = (
 			Contextable &
 			Editable)
 	| ({
-			album: AlbumMessageOptions
+			album: AlbumMessageOptions | AnyMediaMessageContent[]
 	  } & Contextable &
 			Mentionable)
+	| KeepInChatMessageOptions
 	| {
 			contacts: {
 				displayName?: string
@@ -257,6 +315,7 @@ export type AnyRegularMessageContent = (
 			location: WALocationMessage
 	  }
 	| { react: proto.Message.IReactionMessage }
+	| AeqmInteractiveContent
 	| {
 			buttonReply: ButtonReplyInfo
 			type: 'template' | 'plain'
@@ -266,6 +325,11 @@ export type AnyRegularMessageContent = (
 	  }
 	| {
 			listReply: Omit<proto.Message.IListResponseMessage, 'contextInfo'>
+	  }
+	| {
+			/** [@aeqm/baileys] forma alternativa { pin: { key, type }, time } usata dalle fork ChatUnity */
+			pin: { key: WAMessageKey; type: proto.PinInChat.Type; time?: 86400 | 604800 | 2592000 }
+			time?: 86400 | 604800 | 2592000
 	  }
 	| {
 			pin: WAMessageKey

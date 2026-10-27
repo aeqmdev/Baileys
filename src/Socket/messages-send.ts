@@ -35,6 +35,7 @@ import {
 	parseAndInjectE2ESessions,
 	unixTimestampSeconds
 } from '../Utils'
+import { getInteractiveBizNodes } from '../Utils/aeqm-buttons'
 import { getUrlInfo } from '../Utils/link-preview'
 import { makeKeyedMutex, makeMutex } from '../Utils/make-mutex'
 import { getMessageReportingToken, shouldIncludeReportingToken } from '../Utils/reporting-utils'
@@ -1327,6 +1328,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		},
 		sendMessage: async (jid: string, content: AnyMessageContent, options: MiscMessageGenerationOptions = {}) => {
 			const userJid = authState.creds.me!.id
+			const albumItems = 'album' in content && Array.isArray(content.album) ? content.album : undefined
+			let messageContent = content
+			if (albumItems) {
+				if (albumItems.length < 2 || albumItems.some(item => ('image' in item) === ('video' in item))) throw new Boom('Albums require at least two image or video items', { statusCode: 400 })
+				const expectedImageCount = albumItems.filter(item => 'image' in item).length
+				messageContent = { album: { expectedImageCount, expectedVideoCount: albumItems.length - expectedImageCount } }
+			}
 			if (
 				typeof content === 'object' &&
 				'disappearingMessagesInChat' in content &&
@@ -1342,7 +1350,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						: disappearingMessagesInChat
 				await groupToggleEphemeral(jid, value)
 			} else {
-				const fullMsg = await generateWAMessage(jid, content, {
+				const fullMsg = await generateWAMessage(jid, messageContent, {
 					logger,
 					userJid,
 					getUrlInfo: text =>
@@ -1397,6 +1405,11 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 							event_type: 'creation'
 						}
 					} as BinaryNode)
+				} else {
+					// [@aeqm/baileys] pulsanti / liste / messaggi interattivi: servono i nodi "biz"
+					// altrimenti WhatsApp non li mostra.
+					const isPrivateChat = !isJidGroup(jid) && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid'))
+					additionalNodes.push(...getInteractiveBizNodes(normalizeMessageContent(fullMsg.message), isPrivateChat))
 				}
 
 				await relayMessage(jid, fullMsg.message!, {
@@ -1410,6 +1423,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					process.nextTick(async () => {
 						await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
 					})
+				}
+				if (albumItems) {
+					for (const item of albumItems) {
+						const albumMsg = await generateWAMessage(jid, { ...item, albumParentKey: fullMsg.key }, { logger, userJid, upload: waUploadToServer, mediaCache: config.mediaCache, options: config.options, ...options })
+						await relayMessage(jid, albumMsg.message!, { messageId: albumMsg.key.id!, useCachedGroupMetadata: options.useCachedGroupMetadata, statusJidList: options.statusJidList })
+						if (config.emitOwnEvents) process.nextTick(async () => { await messageMutex.mutex(() => upsertMessage(albumMsg, 'append')) })
+					}
 				}
 
 				return fullMsg
