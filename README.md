@@ -8,6 +8,7 @@ MIT-licensed, like the original.
 > **This is not the upstream package.** This fork's package is named `@aeqm/baileys`.
 > Do not install the upstream `baileys` or `@whiskeysockets/baileys` packages if you need the features described below; they do not include this fork's changes.
 > The fork-specific guide is followed by an upstream usage guide, adapted to import from `@aeqm/baileys`.
+> For a topic-by-topic index, see [DOCUMENTATION.md](DOCUMENTATION.md).
 > Links to `baileys.wiki` point to upstream documentation; for this fork's types, refer to the code in `src/Types`.
 
 ## Fork contents
@@ -233,7 +234,7 @@ yarn test:e2e      # end-to-end tests against the "bartender" mock server
 
 Baileys was created by Rajeh Taher, its contributors, and the WhiskeySockets community (MIT license; see [LICENSE](LICENSE)). This fork is not affiliated with or endorsed by them.
 The original project's support and sponsorship sections apply to upstream, not this fork. For questions about the original code, see [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) and <https://baileys.wiki>.
-Fork change history: [CHANGELOG_AEQM.md](CHANGELOG_AEQM.md).
+Fork change history is available in the [GitHub commit history](https://github.com/aeqmdev/Baileys/commits/master).
 
 ---
 
@@ -756,7 +757,7 @@ await sock.sendMessage(
 ```
 
 > [!NOTE]
-> `@aeqm/baileys` also accepts `{ pin: { key, type }, time }`, see [Pin (fork)](#pin-fork).
+> `@aeqm/baileys` also accepts `{ pin: { key, type }, time }`; see [Pinning messages](#pinning-messages).
 
 #### Poll Message
 ```ts
@@ -1453,7 +1454,7 @@ The `'frame'` is what the message received is, it has three components:
 - `tag` -- what this frame is about (eg. message will have 'message')
 - `attrs` -- a string key-value pair with some metadata (contains ID of the message usually)
 - `content` -- the actual data (eg. a message node will have the actual message content in it)
-- read more about this format [here](/src/WABinary/readme.md)
+- read the [WABinary implementation](src/WABinary/)
 
 ### Register a Callback for Websocket Events
 

@@ -65,7 +65,7 @@ Following this policy doesn't slow you down — it just keeps the bar consistent
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the maintainers at **rajeh@reforward.dev**. All complaints will be reviewed and investigated promptly and fairly. The maintainers are obligated to respect the privacy and security of the reporter of any incident.
 
-For security vulnerabilities (which are not Code of Conduct issues), see **[SECURITY.md](SECURITY.md)**.
+For security vulnerabilities (which are not Code of Conduct issues), contact the repository maintainers privately through GitHub.
 
 ## Enforcement Guidelines
 
