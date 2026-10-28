@@ -8,7 +8,6 @@ MIT-licensed, like the original.
 > **This is not the upstream package.** This fork's package is named `@aeqm/baileys`.
 > Do not install the upstream `baileys` or `@whiskeysockets/baileys` packages if you need the features described below; they do not include this fork's changes.
 > The fork-specific guide is followed by an upstream usage guide, adapted to import from `@aeqm/baileys`.
-> For a topic-by-topic index, see [DOCUMENTATION.md](DOCUMENTATION.md).
 > Links to `baileys.wiki` point to upstream documentation; for this fork's types, refer to the code in `src/Types`.
 
 ## Fork contents
