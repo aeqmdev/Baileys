@@ -36,6 +36,7 @@ MIT-licensed, like the original.
 | `group-participants.update` | `participants` is an array of JID strings; full data is in `participantsInfo` (see below) |
 | Pinning | Accepts `{ pin: { key, type }, time }` as well as the official format |
 | Utility | `getButtonReplyId(message)` |
+| Quoted context | `quotedVerified(text, options?)` creates a synthetic quoted-location context; it does not verify an account or message |
 
 ## Requirements and installation
 
