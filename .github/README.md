@@ -4,4 +4,3 @@ Personal fork of [Baileys](https://github.com/WhiskeySockets/Baileys), not affil
 This fork's package is `@aeqm/baileys`; it is distinct from `baileys` and `@whiskeysockets/baileys`.
 
 Full documentation (installation, configuration, compatibility, and usage guide) is in the [main README](../README.md).
-Use the [documentation index](../DOCUMENTATION.md) to jump to a topic.
