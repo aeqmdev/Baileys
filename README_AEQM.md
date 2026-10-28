@@ -1,4 +1,4 @@
-# Documentazione della fork
+# Fork documentation
 
-La documentazione di `@aeqm/baileys` (installazione, configurazione, `legacyParticipants`, LID/PN, pin, pulsanti, test) è stata integrata nel [README principale](README.md).
-Questo file resta solo come rimando, per non lasciare link rotti.
+The `@aeqm/baileys` documentation (installation, configuration, `legacyParticipants`, LID/PN, pinning, buttons, and tests) has been integrated into the [main README](README.md).
+This file remains as a pointer so existing links do not break.

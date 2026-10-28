@@ -5,7 +5,7 @@ export interface Contact {
 	lid?: string
 	/** ID in PN format (@s.whatsapp.net)  **/
 	phoneNumber?: string
-	/** [@aeqm/baileys] alias di phoneNumber: JID @s.whatsapp.net quando noto */
+	/** [@aeqm/baileys] Alias for phoneNumber: the @s.whatsapp.net JID, when known. */
 	jid?: string
 	/** name of the contact, you have saved on your WA */
 	name?: string

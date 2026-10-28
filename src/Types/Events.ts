@@ -83,11 +83,11 @@ export type BaileysEventMap = {
 		authorPn?: string
 		authorUsername?: string
 		/**
-		 * [@aeqm/baileys] con `aeqm.legacyParticipants` attivo (default) a runtime è un array di JID stringa:
-		 * i dati completi sono in `participantsInfo`. Questo tipo descrive la forma upstream (`legacyParticipants: false`).
+		 * [@aeqm/baileys] With `aeqm.legacyParticipants` enabled (the default), this is an array of JID strings at runtime:
+		 * full data is in `participantsInfo`. This type describes the upstream shape (`legacyParticipants: false`).
 		 */
 		participants: GroupParticipant[]
-		/** [@aeqm/baileys] presente solo con `aeqm.legacyParticipants` attivo: partecipanti completi (id, lid, jid, ...) */
+		/** [@aeqm/baileys] Present only when `aeqm.legacyParticipants` is enabled: full participants (id, lid, jid, ...) */
 		participantsInfo?: GroupParticipant[]
 		action: ParticipantAction
 	}

@@ -1,89 +1,89 @@
 # @aeqm/baileys
 
-Fork personale di [Baileys](https://github.com/WhiskeySockets/Baileys) (libreria TypeScript basata su WebSocket per WhatsApp Web), costruita sulla versione upstream **7.0.0-rc14**.
-Aggiunge pulsanti, liste e messaggi interattivi e un livello di compatibilità pensato per i bot scritti per le fork ChatUnity (es. Hastur).
-Licenza MIT, come l'originale.
+A personal fork of [Baileys](https://github.com/WhiskeySockets/Baileys), the TypeScript WebSocket library for WhatsApp Web, based on upstream **7.0.0-rc14**.
+It adds buttons, lists, interactive messages, and a compatibility layer for bots written for ChatUnity forks (such as Hastur).
+MIT-licensed, like the original.
 
 > [!IMPORTANT]
-> **Questo non è il pacchetto upstream.** Il pacchetto di questa fork si chiama `@aeqm/baileys`.
-> Non vanno usati `baileys` né `@aeqm/baileys`: sono il progetto originale, senza le funzioni descritte qui sotto.
-> Dopo la sezione della fork trovi la guida all'uso derivata dal README upstream (in inglese), con gli import adattati a `@aeqm/baileys`.
-> I link a `baileys.wiki` puntano alla documentazione upstream: per i tipi della fork vale il codice in `src/Types`.
+> **This is not the upstream package.** This fork's package is named `@aeqm/baileys`.
+> Do not install the upstream `baileys` or `@whiskeysockets/baileys` packages if you need the features described below; they do not include this fork's changes.
+> The fork-specific guide is followed by an upstream usage guide, adapted to import from `@aeqm/baileys`.
+> Links to `baileys.wiki` point to upstream documentation; for this fork's types, refer to the code in `src/Types`.
 
-## Indice della fork
+## Fork contents
 
-- [Cosa aggiunge](#cosa-aggiunge-rispetto-a-baileys-upstream)
-- [Requisiti e installazione](#requisiti-e-installazione)
-- [Configurazione](#configurazione-aeqm)
-- [Compatibilità `legacyParticipants`](#compatibilità-legacyparticipants)
-- [Campi LID/PN e helper](#campi-lidpn-e-helper)
-- [Pin](#pin-fork)
-- [Pulsanti, liste e messaggi interattivi](#pulsanti-liste-e-messaggi-interattivi)
-- [Sviluppo e test](#sviluppo-e-test)
-- [Stato di verifica](#stato-di-verifica)
-- [Crediti e differenze rispetto a upstream](#crediti-e-differenze-rispetto-a-upstream)
+- [What this fork adds](#what-this-fork-adds-to-upstream-baileys)
+- [Requirements and installation](#requirements-and-installation)
+- [Configuration](#aeqm-configuration)
+- [`legacyParticipants` compatibility](#legacyparticipants-compatibility)
+- [LID/PN fields and helpers](#lidpn-fields-and-helpers)
+- [Pinning messages](#pinning-messages)
+- [Buttons, lists, and interactive messages](#buttons-lists-and-interactive-messages)
+- [Development and tests](#development-and-tests)
+- [Verification status](#verification-status)
+- [Credits and differences from upstream](#credits-and-differences-from-upstream)
 
-## Cosa aggiunge rispetto a Baileys upstream
+## What this fork adds to upstream Baileys
 
-| Funzione | Dettaglio |
+| Feature | Details |
 |---|---|
-| Pulsanti | `sendMessage(jid, { text, footer, buttons: [{ buttonId, buttonText: { displayText } }] })`, anche con `image`/`video`/`document` |
-| Pulsanti estesi | `interactiveButtons`: `reply`, `url`, `copy`, `call`, `list` o formato grezzo `{ name, buttonParamsJson }` |
-| Liste | `{ text, buttonText: 'Apri', sections: [{ title, rows: [{ title, description, rowId }] }] }` |
-| Chiave messaggio | `m.key.senderPn`, `senderLid`, `participantLid` |
-| Helper | `sock.getPNById(lid)`, `sock.getLIDById(pn)` |
-| Partecipanti di gruppo | ogni partecipante in `groupMetadata` ha `id`, `lid`, `jid`, `phoneNumber` |
-| `group-participants.update` | `participants` = array di JID stringa; i dati completi in `participantsInfo` (vedi sotto) |
-| Pin | accetta `{ pin: { key, type }, time }` oltre alla forma ufficiale |
+| Buttons | `sendMessage(jid, { text, footer, buttons: [{ buttonId, buttonText: { displayText } }] })`, also with `image`/`video`/`document` |
+| Extended buttons | `interactiveButtons`: `reply`, `url`, `copy`, `call`, `list`, or the raw `{ name, buttonParamsJson }` format |
+| Lists | `{ text, buttonText: 'Open', sections: [{ title, rows: [{ title, description, rowId }] }] }` |
+| Message key | `m.key.senderPn`, `senderLid`, `participantLid` |
+| Helpers | `sock.getPNById(lid)`, `sock.getLIDById(pn)` |
+| Group participants | Each participant in `groupMetadata` has `id`, `lid`, `jid`, and `phoneNumber` |
+| `group-participants.update` | `participants` is an array of JID strings; full data is in `participantsInfo` (see below) |
+| Pinning | Accepts `{ pin: { key, type }, time }` as well as the official format |
 | Utility | `getButtonReplyId(message)` |
 
-## Requisiti e installazione
+## Requirements and installation
 
-- Node.js `>= 20.19.0` (come da `engines`).
-- La libreria è solo ESM. Da un bot CommonJS `require('@aeqm/baileys')` funziona con Node `>= 20.19` o `>= 22.12`, dove `require()` di moduli ESM è abilitato.
-- Il repository usa Yarn 4 tramite Corepack (`corepack enable`).
+- Node.js `>= 20.19.0` (as specified by `engines`).
+- The library is ESM-only. From a CommonJS bot, `require('@aeqm/baileys')` works with Node `>= 20.19` or `>= 22.12`, where `require()` supports ESM modules.
+- The repository uses Yarn 4 through Corepack (`corepack enable`).
 
-Il pacchetto distribuito contiene la cartella `lib/`, generata dalla build: **non è nel repository**. Prima di usare la fork da una cartella locale va quindi compilata.
+The published package includes the `lib/` directory generated by the build; **it is not committed to this repository**. Build the fork before using it from a local directory.
 
-Da cartella locale, tramite tarball (consigliato, `prepack` esegue la build):
+From a local directory, using a tarball (recommended; `prepack` runs the build):
 
 ```bash
 cd path/to/aeqm-baileys
 yarn install
-npm pack                       # crea aeqm-baileys-<versione>.tgz
-cd path/to/il-tuo-bot
-npm install path/to/aeqm-baileys/aeqm-baileys-<versione>.tgz
+npm pack                       # creates aeqm-baileys-<version>.tgz
+cd path/to/your-bot
+npm install path/to/aeqm-baileys/aeqm-baileys-<version>.tgz
 ```
 
-Da cartella locale, tramite collegamento diretto (richiede di aver già eseguito `yarn install && yarn build` nella cartella della fork):
+From a local directory, using a direct path (requires `yarn install && yarn build` to have already run in the fork directory):
 
 ```bash
 npm install path/to/aeqm-baileys
 ```
 
-Da Git (la build parte da sola grazie allo script `prepare`):
+From Git (the build runs automatically through the `prepare` script):
 
 ```bash
-npm install git+<URL-DEL-REPOSITORY-DELLA-FORK>
+npm install git+https://github.com/aeqmdev/Baileys.git
 ```
 
-`<URL-DEL-REPOSITORY-DELLA-FORK>` va sostituito con l'URL reale del repository quando è definito: `homepage` e `repository` in `package.json` puntano ancora a upstream e vanno aggiornati insieme.
+The `homepage` and `repository` fields in `package.json` still point to upstream and should be updated if you want package metadata to point to this fork.
 
-Se in futuro il pacchetto verrà pubblicato su npm con lo scope `@aeqm`, l'installazione sarà `npm install @aeqm/baileys`. Fino ad allora non assumere che sia disponibile sul registro.
+If the package is published to npm under the `@aeqm` scope in the future, install it with `npm install @aeqm/baileys`. Until then, do not assume it is available in the registry.
 
-Nel codice:
+In your code:
 
 ```ts
 import makeWASocket from '@aeqm/baileys'
 ```
 
-### Migrazione da `@chatunity/baileys`
+### Migrating from `@chatunity/baileys`
 
-Nel bot sostituisci `@chatunity/baileys` con `@aeqm/baileys` (`package.json`, `index.js`, `lib/pair.js`, `lib/message-utils.js`, `lib/media-moderation.js`). La libreria non stampa nessun banner all'avvio.
+Replace `@chatunity/baileys` with `@aeqm/baileys` in your bot (`package.json`, `index.js`, `lib/pair.js`, `lib/message-utils.js`, and `lib/media-moderation.js`). The library does not print a banner at startup.
 
-## Configurazione `aeqm`
+## `aeqm` configuration
 
-Le compatibilità sono attive per default e si regolano da `makeWASocket`:
+Compatibility features are enabled by default and can be configured through `makeWASocket`:
 
 ```ts
 const sock = makeWASocket({
@@ -92,154 +92,154 @@ const sock = makeWASocket({
         legacyParticipants: true,   // group-participants.update -> participants: string[]
         legacyPin: true,            // sendMessage({ pin: { key, type }, time })
         lidHelpers: true,           // sock.getPNById / sock.getLIDById
-        buttonsMode: 'native_flow'  // modalità predefinita dei pulsanti: 'native_flow' | 'legacy'
+        buttonsMode: 'native_flow'  // default button mode: 'native_flow' | 'legacy'
     }
 })
 ```
 
-| Opzione | Default | Con `false` |
+| Option | Default | When `false` |
 |---|---|---|
-| `legacyParticipants` | `true` | gli eventi restano nella forma upstream |
-| `legacyPin` | `true` | la forma annidata `{ pin: { key, type } }` non viene più riscritta |
-| `lidHelpers` | `true` | `getPNById` e `getLIDById` non vengono aggiunti al socket |
-| `buttonsMode` | `'native_flow'` | (non booleana) vedi la sezione sui pulsanti |
+| `legacyParticipants` | `true` | Events retain the upstream shape |
+| `legacyPin` | `true` | The nested `{ pin: { key, type } }` format is not rewritten |
+| `lidHelpers` | `true` | `getPNById` and `getLIDById` are not added to the socket |
+| `buttonsMode` | `'native_flow'` | (not a boolean) see the buttons section |
 
-Per disattivare una compatibilità passa `false` in modo esplicito: le opzioni omesse prendono il default, ma un valore `undefined` passato apposta lo sostituisce e disattiva l'opzione.
+To disable a compatibility feature, explicitly pass `false`. Omitted options use their defaults, but an explicitly passed `undefined` overrides the default and disables that option.
 
-## Compatibilità `legacyParticipants`
+## `legacyParticipants` compatibility
 
-Upstream emette `group-participants.update` con `participants` come array di **oggetti** partecipante.
-Le fork ChatUnity lo emettono come array di **JID stringa**, ed è ciò che si aspettano i bot scritti per esse.
+Upstream emits `group-participants.update` with `participants` as an array of participant **objects**.
+ChatUnity forks emit an array of **JID strings**, which is what bots written for those forks expect.
 
-Con `legacyParticipants` attivo (default) il payload che arriva ai tuoi listener è:
+With `legacyParticipants` enabled (the default), listeners receive this payload:
 
 ```ts
 sock.ev.on('group-participants.update', ({ id, author, action, participants, participantsInfo }) => {
-    // participants:     ['111@lid', '39333@s.whatsapp.net']          <- stringhe (l'`id` di ogni partecipante)
-    // participantsInfo: [{ id, lid, jid, phoneNumber, admin, ... }]  <- oggetti completi, normalizzati
+    // participants:     ['111@lid', '39333@s.whatsapp.net']          <- strings (each participant's `id`)
+    // participantsInfo: [{ id, lid, jid, phoneNumber, admin, ... }]  <- full normalized objects
 })
 ```
 
-- `participants` contiene l'`id` di ciascun partecipante. Segue l'addressing mode del gruppo: in un gruppo LID sono `@lid`, non numeri di telefono. Per confrontare con un numero usa `participantsInfo[i].jid` (o `phoneNumber`), oppure `sock.getPNById(...)`.
-- `participantsInfo` contiene gli oggetti originali, normalizzati con `lid`, `jid` e `phoneNumber` quando sono ricavabili dai dati dell'evento. Se il numero di un partecipante LID non è presente nell'evento, `jid` e `phoneNumber` restano non valorizzati: la fork non fa richieste di rete per ricavarli.
-- Gli altri campi (`id`, `author`, `authorPn`, `authorUsername`, `action`) non cambiano. Il payload emesso non viene modificato: la trasformazione produce una copia.
-- Vale per i listener registrati con `sock.ev.on(...)` e per gli handler di `sock.ev.process(...)`. Gli altri eventi non vengono toccati.
-- Non dipende da questa opzione la normalizzazione dei partecipanti restituiti da `groupMetadata` e simili: hanno sempre `id`, `lid`, `jid` e `phoneNumber` quando noti.
+- `participants` contains each participant's `id`. It follows the group's addressing mode: in an LID group, values are `@lid` JIDs, not phone numbers. To compare by phone number, use `participantsInfo[i].jid` (or `phoneNumber`), or call `sock.getPNById(...)`.
+- `participantsInfo` contains the original objects, normalized with `lid`, `jid`, and `phoneNumber` when those values can be derived from the event. If the event does not include the phone number for an LID participant, `jid` and `phoneNumber` remain unset; the fork does not make network requests to look them up.
+- The other fields (`id`, `author`, `authorPn`, `authorUsername`, `action`) are unchanged. The emitted payload is not mutated; the transformation returns a copy.
+- This applies to listeners registered with `sock.ev.on(...)` and handlers registered with `sock.ev.process(...)`. Other events are unaffected.
+- This option does not affect normalization of participants returned by `groupMetadata` and similar methods: those always have `id`, `lid`, `jid`, and `phoneNumber` when known.
 
-**Disattivarla**:
+**Disable it:**
 
 ```ts
 const sock = makeWASocket({ auth: state, aeqm: { legacyParticipants: false } })
-// participants: oggetti, come in Baileys upstream; participantsInfo non è presente
+// participants: objects, as in upstream Baileys; participantsInfo is not present
 ```
 
-**TypeScript.** I tipi pubblici descrivono la forma upstream (`participants: GroupParticipant[]`) e dichiarano `participantsInfo` come opzionale. Con il default attivo, a runtime `participants` è invece `string[]`: in un progetto TypeScript conviene impostare `legacyParticipants: false` oppure leggere `participantsInfo`.
+**TypeScript.** The public types describe the upstream shape (`participants: GroupParticipant[]`) and declare `participantsInfo` as optional. With the default enabled, `participants` is `string[]` at runtime; in TypeScript projects, set `legacyParticipants: false` or read `participantsInfo` instead.
 
-**Perché il default è `true`.** La fork esiste per essere sostituita a `@chatunity/baileys` nei bot che si aspettano le stringhe: con il default a `false` quei bot si rompono senza modifiche. Il costo è l'incongruenza con i tipi per i progetti TypeScript, che hanno comunque la via d'uscita descritta sopra. Il default andrebbe riconsiderato se la fork smettesse di servire principalmente bot di quel tipo.
+**Why the default is `true`.** This fork is intended to replace `@chatunity/baileys` in bots that expect strings. With a default of `false`, those bots would break without changes. The trade-off is a mismatch with the TypeScript types; the options above provide a workaround. Reconsider this default if the fork no longer primarily serves those bots.
 
-## Campi LID/PN e helper
+## LID/PN fields and helpers
 
-Sui messaggi ricevuti da altri (non sui tuoi) la chiave contiene, quando ricavabili:
+For messages received from other people (not your own), the key includes the following fields when they can be derived:
 
-- `key.senderLid`, `key.participantLid`: il LID del mittente;
-- `key.senderPn`: il JID del numero di telefono del mittente.
+- `key.senderLid`, `key.participantLid`: the sender's LID;
+- `key.senderPn`: the sender's phone-number JID.
 
-Sono derivati da `participant`/`participantAlt` nei gruppi e da `remoteJid`/`remoteJidAlt` nelle chat private. Se manca il numero di un mittente `@lid`, viene cercato nella mappatura LID↔numero già salvata **in locale** (nessuna richiesta di rete durante la ricezione). Un campo già presente non viene sovrascritto.
+These are derived from `participant`/`participantAlt` in groups and `remoteJid`/`remoteJidAlt` in private chats. If a sender's `@lid` JID has no phone number, the fork looks it up in the LID-to-phone mapping already stored **locally** (no network request is made while receiving a message). Existing fields are never overwritten.
 
 ```ts
 await sock.getPNById('111@lid')                      // '39333@s.whatsapp.net' | null
 await sock.getLIDById('39333@s.whatsapp.net')        // '111@lid' | null
 ```
 
-- Accettano JID con o senza device (`111:7@lid`) e restituiscono sempre JID senza device.
-- Un JID già del tipo richiesto viene restituito così com'è.
-- Restituiscono `null` se il JID non è un utente (per esempio un gruppo) o se la mappatura locale non lo conosce.
-- Con `lidHelpers: false` non vengono aggiunti. Nei tipi sono opzionali per lo stesso motivo.
+- These methods accept JIDs with or without a device suffix (`111:7@lid`) and always return JIDs without one.
+- A JID that is already of the requested type is returned as-is.
+- They return `null` if the JID is not a user (for example, it is a group) or if the local mapping has no entry for it.
+- With `lidHelpers: false`, the methods are not added to the socket. They are optional in the types for the same reason.
 
-## Pin (fork)
+## Pinning messages
 
-Il tipo `type` è `proto.PinInChat.Type`: `1` fissa il messaggio per tutti, `2` lo rimuove (`0` è `UNKNOWN_TYPE`).
-`time` è in secondi: `86400` (24 ore), `604800` (7 giorni), `2592000` (30 giorni).
+The `type` is `proto.PinInChat.Type`: `1` pins the message for everyone, `2` unpins it (`0` is `UNKNOWN_TYPE`).
+`time` is measured in seconds: `86400` (24 hours), `604800` (7 days), `2592000` (30 days).
 
 ```ts
-// forma ufficiale
+// Official format
 await sock.sendMessage(jid, { pin: message.key, type: 1, time: 604800 })
 
-// forma delle fork ChatUnity (con legacyPin attivo, default)
+// ChatUnity fork format (with `legacyPin` enabled, the default)
 await sock.sendMessage(jid, { pin: { key: message.key, type: 1 }, time: 604800 })
 ```
 
-La forma annidata viene riscritta in quella ufficiale prima dell'invio. Se manca, `type` vale `1`; se `time` è presente sia fuori sia dentro `pin`, vince quello esterno.
+The nested format is rewritten to the official format before sending. If `type` is missing, it defaults to `1`; if `time` is provided both outside and inside `pin`, the outer value takes precedence.
 
-## Pulsanti, liste e messaggi interattivi
+## Buttons, lists, and interactive messages
 
-Formati accettati da `sendMessage(jid, content)`:
+Formats accepted by `sendMessage(jid, content)`:
 
 ```ts
-// 1) quick reply in stile ChatUnity (anche con image / video / document come intestazione)
+// 1) ChatUnity-style quick replies (also supports image / video / document headers)
 await sock.sendMessage(jid, {
-    text: 'Scegli',
-    footer: 'piè di pagina',
+    text: 'Choose',
+    footer: 'Footer',
     buttons: [{ buttonId: '.menu admin', buttonText: { displayText: 'Admin' } }]
 })
 
-// 2) pulsanti interattivi estesi
+// 2) Extended interactive buttons
 await sock.sendMessage(jid, {
-    text: 'Scegli',
+    text: 'Choose',
     interactiveButtons: [
-        { type: 'reply', text: 'Ok',     id: '.menu' },
-        { type: 'url',   text: 'Sito',   url: 'https://example.com' },
-        { type: 'copy',  text: 'Copia',  code: 'ABC123' },
-        { type: 'call',  text: 'Chiama', phone: '+39...' },
-        { type: 'list',  text: 'Scegli', sections: [{ title: 'A', rows: [{ title: 'r', rowId: 'id1' }] }] },
-        { name: 'quick_reply', buttonParamsJson: '{"display_text":"x","id":"y"}' } // formato grezzo
+        { type: 'reply', text: 'OK',    id: '.menu' },
+        { type: 'url',   text: 'Site',  url: 'https://example.com' },
+        { type: 'copy',  text: 'Copy',  code: 'ABC123' },
+        { type: 'call',  text: 'Call',  phone: '+39...' },
+        { type: 'list',  text: 'Choose', sections: [{ title: 'A', rows: [{ title: 'Row', rowId: 'id1' }] }] },
+        { name: 'quick_reply', buttonParamsJson: '{"display_text":"x","id":"y"}' } // raw format
     ]
 })
 
-// 3) lista (menu a tendina)
+// 3) List (dropdown menu)
 await sock.sendMessage(jid, {
     text: 'Menu',
-    buttonText: 'Apri',
-    sections: [{ title: 'Sezione', rows: [{ title: 'Voce', description: 'dettaglio', rowId: 'id1' }] }]
+    buttonText: 'Open',
+    sections: [{ title: 'Section', rows: [{ title: 'Item', description: 'Details', rowId: 'id1' }] }]
 })
 ```
 
-- Conversione: `reply`/`quick_reply` → `quick_reply`; `url` → `cta_url`; `copy` → `cta_copy`; `call` → `cta_call`; `list` e `sections` → `single_select`.
-- `buttonsMode: 'native_flow'` (default) invia un messaggio interattivo `nativeFlowMessage`. `'legacy'` usa il vecchio `buttonsMessage`, che contiene **solo** i pulsanti quick reply. Si può impostare per tutto il socket (`aeqm.buttonsMode`) o per singolo messaggio (`buttonsMode` nel contenuto, che ha la precedenza).
-- Per leggere quale pulsante è stato premuto: `getButtonReplyId(message.message)` restituisce l'id da `buttonsResponseMessage`, `templateButtonReplyMessage`, `listResponseMessage` o `interactiveResponseMessage`, oppure `null`.
+- Conversion: `reply`/`quick_reply` → `quick_reply`; `url` → `cta_url`; `copy` → `cta_copy`; `call` → `cta_call`; `list` and `sections` → `single_select`.
+- `buttonsMode: 'native_flow'` (the default) sends an interactive `nativeFlowMessage`. `'legacy'` uses the older `buttonsMessage`, which supports **only** quick-reply buttons. Set it for the entire socket (`aeqm.buttonsMode`) or for a single message (`buttonsMode` in the content, which takes precedence).
+- To read which button was selected, `getButtonReplyId(message.message)` returns the ID from `buttonsResponseMessage`, `templateButtonReplyMessage`, `listResponseMessage`, or `interactiveResponseMessage`, or `null`.
 
-## Sviluppo e test
+## Development and tests
 
 ```bash
 corepack enable
 yarn install
-yarn build         # compila in lib/
-yarn lint          # tsc + ESLint (Prettier incluso)
-yarn test          # test unitari e d'integrazione (Jest)
-yarn selftest      # script di verifica rapida delle parti pure della fork
-yarn test:e2e      # end-to-end contro il server mock "bartender"
+yarn build         # builds into lib/
+yarn lint          # tsc + ESLint (including Prettier)
+yarn test          # unit and integration tests (Jest)
+yarn selftest      # quick checks for the fork's pure helper functions
+yarn test:e2e      # end-to-end tests against the "bartender" mock server
 ```
 
-**TLS nei test end-to-end.** Il mock espone un certificato autofirmato e il repository non contiene il certificato da considerare attendibile. I test che parlano col mock devono quindi saltare la verifica per quella connessione. Gli helper in `src/__tests__/e2e/helpers` lo fanno già con un `Agent` dedicato, ma il download dei media usa il `fetch` nativo di Node, che ignora gli `Agent` HTTPS: per questo lo script `test:e2e:mock` imposta `NODE_TLS_REJECT_UNAUTHORIZED=0` per quel solo processo. Il test che contatta il vero `web.whatsapp.com` (`fetch-wa-web-version`) gira a parte, in `test:e2e:live`, **con la verifica TLS attiva**. Nessun codice di runtime della libreria disattiva la verifica TLS. Se il certificato del mock diventa disponibile, si può sostituire la variabile con `NODE_EXTRA_CA_CERTS`.
+**TLS in end-to-end tests.** The mock server uses a self-signed certificate, and the repository does not include a certificate to trust. Tests that connect to the mock therefore need to skip certificate verification for that connection. The helpers in `src/__tests__/e2e/helpers` already do this with a dedicated `Agent`, but media downloads use Node's native `fetch`, which ignores HTTPS `Agent` instances. For that reason, the `test:e2e:mock` script sets `NODE_TLS_REJECT_UNAUTHORIZED=0` for that process only. The test that contacts the real `web.whatsapp.com` (`fetch-wa-web-version`) runs separately as `test:e2e:live`, **with TLS verification enabled**. No library runtime code disables TLS verification. If the mock certificate becomes available, replace the variable with `NODE_EXTRA_CA_CERTS`.
 
-## Stato di verifica
+## Verification status
 
-- I **pulsanti** (quick reply, pulsanti interattivi, liste) sono stati verificati manualmente su WhatsApp dal maintainer della fork. Come vengono mostrati dipende comunque dal server e dal client WhatsApp e può cambiare.
-- Il resto del livello di compatibilità (eventi dei partecipanti, campi LID/PN, helper, pin) è coperto da test automatici (`yarn test`, `yarn selftest`), non da una verifica dichiarata su WhatsApp reale.
-- I test dei pulsanti nel repository controllano solo che documentazione e tipi corrispondano alle funzioni di conversione, non il rendering su WhatsApp.
+- **Buttons** (quick replies, interactive buttons, and lists) have been manually verified on WhatsApp by the fork maintainer. Their rendering can still vary depending on the WhatsApp server and client.
+- The rest of the compatibility layer (participant events, LID/PN fields, helpers, and pinning) is covered by automated tests (`yarn test`, `yarn selftest`); it has not been claimed as verified on real WhatsApp.
+- The button tests in this repository only check that the documentation and types match the conversion functions; they do not test rendering in WhatsApp.
 
-## Crediti e differenze rispetto a upstream
+## Credits and differences from upstream
 
-Baileys è opera di Rajeh Taher, dei contributori e della community WhiskeySockets (licenza MIT, vedi [LICENSE](LICENSE)). Questa fork non è affiliata né approvata da loro.
-Le sezioni "supporto" e "sponsor" del progetto originale riguardano upstream e non questa fork. Per questioni sul codice originale: [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) e <https://baileys.wiki>.
-Cronologia delle modifiche della fork: [CHANGELOG_AEQM.md](CHANGELOG_AEQM.md).
+Baileys was created by Rajeh Taher, its contributors, and the WhiskeySockets community (MIT license; see [LICENSE](LICENSE)). This fork is not affiliated with or endorsed by them.
+The original project's support and sponsorship sections apply to upstream, not this fork. For questions about the original code, see [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) and <https://baileys.wiki>.
+Fork change history: [CHANGELOG_AEQM.md](CHANGELOG_AEQM.md).
 
 ---
 
-# Guida all'uso (derivata dal README di Baileys upstream)
+# Usage guide (adapted from the upstream Baileys README)
 
 > [!CAUTION]
-> Dalla 7.0.0 upstream ha introdotto diverse modifiche incompatibili: vedi https://whiskey.so/migrate-latest.
+> Upstream Baileys 7.0.0 introduced several breaking changes; see https://whiskey.so/migrate-latest.
 
 
 # Disclaimer
@@ -267,7 +267,7 @@ To run the example script, download or clone the repo and then type the followin
 
 # Links
 
-- [Documentazione upstream](https://baileys.wiki/docs/intro/)
+- [Upstream documentation](https://baileys.wiki/docs/intro/)
 - [Discord upstream](https://discord.gg/WeJM5FP9GG)
 
 # Index
@@ -1494,22 +1494,23 @@ SOFTWARE.
 
 Thus, the maintainers of the project can't be held liable for any potential misuse of this project.
 
-## API aggiuntive della fork @aeqm/baileys
 
-La fork mantiene il supporto esistente a `mentionAll`, inviti di gruppo, prodotti, eventi, sondaggi base, helper LID/PN e messaggi interattivi. Le API dei pulsanti e delle liste già presenti restano invariate.
+## Additional APIs in the @aeqm/baileys fork
 
-### Album immagini e video
+The fork retains existing support for `mentionAll`, group invitations, products, events, basic polls, LID/PN helpers, and interactive messages. The existing button and list APIs remain unchanged.
+
+### Image and video albums
 
 ```ts
 await sock.sendMessage(jid, {
   album: [
-    { image: { url: './foto.jpg' }, caption: 'Foto' },
+    { image: { url: './photo.jpg' }, caption: 'Photo' },
     { video: { url: './clip.mp4' }, caption: 'Clip' }
   ]
 })
 ```
 
-Servono almeno due elementi, ciascuno immagine o video. La libreria invia il contenitore e associa i media ai protobuf album già presenti. Restano disponibili anche `albumParentKey`, `expectedImageCount` e `expectedVideoCount` per gli usi di basso livello.
+At least two items are required, each containing an image or video. The library sends the container and associates the media with the existing album protobufs. `albumParentKey`, `expectedImageCount`, and `expectedVideoCount` are also available for lower-level use.
 
 ### Keep in Chat
 
@@ -1517,12 +1518,12 @@ Servono almeno due elementi, ciascuno immagine o video. La libreria invia il con
 await sock.sendMessage(jid, { keep: message.key, type: proto.KeepType.KEEP_FOR_ALL })
 ```
 
-Usa `proto.KeepType.KEEP_FOR_ALL` per conservare il messaggio e `proto.KeepType.UNDO_KEEP_FOR_ALL` per rimuovere la conservazione.
+Use `proto.KeepType.KEEP_FOR_ALL` to keep the message and `proto.KeepType.UNDO_KEEP_FOR_ALL` to undo keeping it.
 
-### Sondaggi quiz
+### Quiz polls
 
-Sono esposti `pollType` e `correctAnswer`, confermati da WAProto. Il quiz richiede che la risposta corretta corrisponda a un’opzione e può essere inviato a una newsletter. Il protobuf locale non conferma un campo di scadenza per i sondaggi; le opzioni di voto non rappresentate dai tipi non sono esposte.
+`pollType` and `correctAnswer` are exposed and confirmed by WAProto. The correct answer must match one of the options, and the quiz can be sent to a newsletter. The local protobuf does not confirm an expiration field for polls; voting options not represented by the types are not exposed.
 
-L’upload media raw per newsletter era già presente. Sticker pack, rich response strutturate e card/carousel non sono esposti: le API della fork di riferimento non bastano da sole a convalidare i payload contro il sorgente locale.
+Raw media uploads for newsletters were already available. Sticker packs, structured rich responses, and cards/carousels are not exposed: the reference fork's APIs alone are not sufficient to validate those payloads against the local source.
 
-Le miniature video richiedono FFmpeg nel `PATH`; il processo riceve argomenti separati e la diagnostica stderr raccolta è limitata a 16 KiB.
+Video thumbnails require FFmpeg on `PATH`; the process receives separate arguments, and collected stderr diagnostics are limited to 16 KiB.

@@ -1,14 +1,14 @@
 /**
- * @aeqm/baileys — livello di compatibilità.
+ * @aeqm/baileys — compatibility layer.
  *
- * Questo file NON importa nulla di "pesante" (solo tipi): le funzioni sono pure,
- * così si possono testare senza avviare un socket.
+ * This file imports nothing "heavy" (types only): its functions are pure, so they can be
+ * tested without starting a socket.
  *
- * Perché esiste: molti bot (compreso Hastur) sono scritti per le fork "ChatUnity"
- * e simili, che rispetto al Baileys ufficiale 7.x espongono:
+ * Why it exists: many bots (including Hastur) are written for "ChatUnity" forks and
+ * similar projects, which expose the following in addition to official Baileys 7.x:
  *   - m.key.senderPn / m.key.senderLid / m.key.participantLid
- *   - partecipanti dei gruppi con i tre campi id / lid / jid
- *   - group-participants.update con `participants` come array di STRINGHE (JID)
+ *   - group participants with the three fields id / lid / jid
+ *   - group-participants.update with `participants` as an array of JID strings
  *   - sock.getPNById(lid) / sock.getLIDById(pn)
  *   - sendMessage(jid, { pin: { key, type }, time })
  */
@@ -21,7 +21,7 @@ const PN_RE = /@s\.whatsapp\.net$/
 export const isLidJid = (jid?: string | null): jid is string => !!jid && LID_RE.test(jid)
 export const isPnJid = (jid?: string | null): jid is string => !!jid && PN_RE.test(jid)
 
-/** Toglie la parte ":device" da un JID (123:4@s.whatsapp.net -> 123@s.whatsapp.net). */
+/** Removes the ":device" suffix from a JID (123:4@s.whatsapp.net -> 123@s.whatsapp.net). */
 export const stripDevice = (jid?: string | null): string | undefined => {
 	if (!jid) return undefined
 	const at = jid.indexOf('@')
@@ -37,9 +37,9 @@ type LegacyKeyFields = {
 }
 
 /**
- * Calcola i campi "legacy" a partire da ciò che Baileys 7 già mette sulla chiave
- * (participant/participantAlt per i gruppi, remoteJid/remoteJidAlt per le chat private).
- * Non fa richieste di rete: usa solo i dati presenti.
+ * Computes the "legacy" fields from data Baileys 7 already puts on the key
+ * (participant/participantAlt for groups, remoteJid/remoteJidAlt for private chats).
+ * It makes no network requests and uses only the available data.
  */
 export const computeLegacyKeyFields = (key: WAMessageKey): LegacyKeyFields => {
 	const isGroup = !!key.remoteJid && key.remoteJid.endsWith('@g.us')
@@ -65,7 +65,7 @@ export const computeLegacyKeyFields = (key: WAMessageKey): LegacyKeyFields => {
 	return out
 }
 
-/** Aggiunge (senza sovrascrivere) senderPn / senderLid / participantLid alla chiave. */
+/** Adds senderPn / senderLid / participantLid to the key without overwriting existing values. */
 export const applyLegacyKeyFields = (key: WAMessageKey, resolved?: LegacyKeyFields): WAMessageKey => {
 	if (!key || key.fromMe) return key
 	const computed = { ...computeLegacyKeyFields(key), ...(resolved || {}) }
@@ -85,9 +85,9 @@ type ParticipantLike = {
 }
 
 /**
- * Normalizza un partecipante di gruppo: oltre a `id` (che segue l'addressing mode
- * del gruppo) garantisce `lid` (se noto), `jid` (numero di telefono, se noto) e
- * `phoneNumber`. Così il confronto su [p.id, p.lid, p.jid] funziona sempre.
+ * Normalizes a group participant: in addition to `id` (which follows the group's
+ * addressing mode), it ensures `lid` (if known), `jid` (phone-number JID, if known), and
+ * `phoneNumber`. This makes comparisons across [p.id, p.lid, p.jid] consistent.
  */
 export const normalizeParticipant = <P extends ParticipantLike>(p: P): P & { jid?: string; lid?: string } => {
 	if (!p || typeof p !== 'object') return p
@@ -104,14 +104,14 @@ export const normalizeParticipant = <P extends ParticipantLike>(p: P): P & { jid
 	return out
 }
 
-/** Da array di oggetti-partecipante (o stringhe) a array di JID stringa. */
+/** Converts an array of participant objects (or strings) to an array of JID strings. */
 export const participantsToJids = (participants: Array<string | ParticipantLike>): string[] =>
 	(participants || []).map(p => (typeof p === 'string' ? p : p?.id)).filter((x): x is string => !!x)
 
 /**
- * Trasforma il payload di 'group-participants.update' nel formato "legacy":
+ * Converts the 'group-participants.update' payload to the "legacy" format:
  *   participants -> string[]
- *   participantsInfo -> gli oggetti originali (normalizzati), per chi li vuole
+ *   participantsInfo -> the original (normalized) objects, for consumers that need them.
  */
 export const toLegacyParticipantsUpdate = <U extends { participants: any[] }>(update: U) => {
 	if (!update || !Array.isArray(update.participants)) return update
@@ -124,8 +124,8 @@ export const toLegacyParticipantsUpdate = <U extends { participants: any[] }>(up
 }
 
 /**
- * Accetta sia la forma ufficiale { pin: <key>, type, time } sia la forma usata
- * dalle fork ChatUnity { pin: { key, type, time? }, time? }.
+ * Accepts both the official format `{ pin: <key>, type, time }` and the format used by
+ * ChatUnity forks: `{ pin: { key, type, time? }, time? }`.
  */
 export const normalizePinContent = (content: any): any => {
 	if (!content || typeof content !== 'object') return content
@@ -139,9 +139,9 @@ export const normalizePinContent = (content: any): any => {
 }
 
 /**
- * Versione asincrona di applyLegacyKeyFields: se manca il numero di telefono di un
- * mittente @lid prova a ricavarlo dalla mappatura LID<->PN già salvata (SOLO lettura
- * locale: nessuna richiesta di rete nel percorso di ricezione del messaggio).
+ * Asynchronous version of applyLegacyKeyFields: if an @lid sender's phone number is
+ * missing, it tries to retrieve it from the existing LID<->PN mapping (LOCAL READ ONLY;
+ * no network requests are made while receiving the message).
  */
 export const enrichLegacyKeyFields = async (
 	key: WAMessageKey,
@@ -159,7 +159,7 @@ export const enrichLegacyKeyFields = async (
 				const clean = stripDevice(pn)
 				if (isPnJid(clean)) target.senderPn = clean
 			} catch {
-				// mappatura non disponibile: si riprova al messaggio successivo
+				// Mapping unavailable; try again with the next message.
 			}
 		}
 	}

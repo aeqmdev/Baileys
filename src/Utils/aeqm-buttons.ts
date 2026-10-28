@@ -1,36 +1,36 @@
 /**
- * @aeqm/baileys — pulsanti e messaggi interattivi.
+ * @aeqm/baileys — buttons and interactive messages.
  *
- * Il Baileys ufficiale 7.x non sa inviare `buttons`, `sections` ecc. Qui c'è la
- * parte "pura" (senza dipendenze runtime) che converte il contenuto di
- * sendMessage in strutture protobuf-compatibili e decide quali nodi binari "biz"
- * servono perché WhatsApp li renderizzi.
+ * Official Baileys 7.x cannot send `buttons`, `sections`, and similar content. This file
+ * contains the pure logic (with no runtime dependencies) that converts `sendMessage`
+ * content into protobuf-compatible structures and determines which binary "biz" nodes
+ * are needed for WhatsApp to render them.
  *
- * Formati accettati dentro sendMessage(jid, content):
+ * Formats accepted by sendMessage(jid, content):
  *
- *  1) Pulsanti "quick reply" in stile ChatUnity (è ciò che usa Hastur):
+ *  1) ChatUnity-style quick-reply buttons (used by Hastur):
  *       { text|caption, footer, buttons: [{ buttonId, buttonText: { displayText } }] }
- *     (funziona anche con image/video/document come header)
+ *     (also works with image/video/document headers)
  *
- *  2) Pulsanti interattivi estesi:
+ *  2) Extended interactive buttons:
  *       { text, footer, interactiveButtons: [
  *           { type: 'reply', text: 'Ok',      id: '.menu' },
- *           { type: 'url',   text: 'Sito',    url: 'https://…' },
- *           { type: 'copy',  text: 'Copia',   code: 'ABC123' },
- *           { type: 'call',  text: 'Chiama',  phone: '+39…' },
- *           { type: 'list',  text: 'Scegli',  sections: [...] },
- *           { name: 'quick_reply', buttonParamsJson: '{"display_text":"x","id":"y"}' }   // grezzo
+ *           { type: 'url',   text: 'Site',    url: 'https://…' },
+ *           { type: 'copy',  text: 'Copy',   code: 'ABC123' },
+ *           { type: 'call',  text: 'Call',  phone: '+39…' },
+ *           { type: 'list',  text: 'Choose',  sections: [...] },
+ *           { name: 'quick_reply', buttonParamsJson: '{"display_text":"x","id":"y"}' }   // raw format
  *       ] }
  *
- *  3) Lista (menu a tendina):
- *       { text, footer, title, buttonText: 'Apri menu',
+ *  3) List (dropdown menu):
+ *       { text, footer, title, buttonText: 'Open menu',
  *         sections: [{ title, rows: [{ title, description, rowId }] }] }
  *
- *  Opzioni:
+ *  Options:
  *    buttonsMode: 'native_flow' (default) | 'legacy'
- *      - native_flow: messaggio interattivo (nativeFlowMessage), il formato che i
- *        client WhatsApp attuali mostrano.
- *      - legacy: vecchio buttonsMessage (utile solo se un client lo supporta ancora).
+ *      - native_flow: interactive message (nativeFlowMessage), the format currently rendered by
+ *        WhatsApp clients.
+ *      - legacy: legacy buttonsMessage (only useful if a client still supports it).
  */
 
 import type { BinaryNode } from '../WABinary/types'
@@ -43,7 +43,7 @@ const isObj = (v: unknown): v is Record<string, any> => typeof v === 'object' &&
 
 const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : v == null ? fallback : String(v))
 
-/** Vero se il contenuto di sendMessage richiede di essere trasformato in messaggio interattivo. */
+/** Returns true when sendMessage content needs to be converted into an interactive message. */
 export const hasInteractiveContent = (content: any): boolean => {
 	if (!isObj(content)) return false
 	if (Array.isArray(content.buttons) && content.buttons.length > 0) return true
@@ -53,7 +53,7 @@ export const hasInteractiveContent = (content: any): boolean => {
 }
 
 // ---------------------------------------------------------------------------
-//  Singoli pulsanti
+//  Individual buttons
 // ---------------------------------------------------------------------------
 
 const quickReply = (text: string, id: string): NativeFlowButton => ({
@@ -81,11 +81,11 @@ const buildSingleSelect = (label: string, sections: SectionInput[]): NativeFlowB
 	})
 })
 
-/** Converte un pulsante in qualunque forma accettata nel formato nativeFlow. */
+/** Converts a button from any supported input shape to the nativeFlow format. */
 export const toNativeFlowButton = (b: any): NativeFlowButton | null => {
 	if (!isObj(b)) return null
 
-	// Già nel formato grezzo.
+	// Already in the raw format.
 	if (typeof b.name === 'string' && b.name && (b.buttonParamsJson !== undefined || b.params !== undefined)) {
 		const raw = b.buttonParamsJson !== undefined ? b.buttonParamsJson : b.params
 		return { name: b.name, buttonParamsJson: typeof raw === 'string' ? raw : JSON.stringify(raw) }
@@ -125,8 +125,8 @@ export const toNativeFlowButton = (b: any): NativeFlowButton | null => {
 		case 'reply':
 		case 'quick_reply':
 		default: {
-			// Forma ChatUnity: { buttonId, buttonText: { displayText } }
-			// Forma breve:     { id, text }
+			// ChatUnity format: { buttonId, buttonText: { displayText } }
+			// Short format:     { id, text }
 			const id = str(b.buttonId ?? b.id)
 			if (!text && !id) return null
 			return quickReply(text || id, id || text)
@@ -135,8 +135,8 @@ export const toNativeFlowButton = (b: any): NativeFlowButton | null => {
 }
 
 /**
- * Raccoglie tutti i pulsanti presenti nel contenuto (buttons + interactiveButtons +
- * eventuale lista `sections`) come array nativeFlow.
+ * Collects all buttons in the content (`buttons` + `interactiveButtons` + any
+ * `sections` list) into a nativeFlow array.
  */
 export const collectNativeFlowButtons = (content: any): NativeFlowButton[] => {
 	const out: NativeFlowButton[] = []
@@ -164,7 +164,7 @@ export const collectNativeFlowButtons = (content: any): NativeFlowButton[] => {
 }
 
 // ---------------------------------------------------------------------------
-//  Costruzione del messaggio
+//  Message construction
 // ---------------------------------------------------------------------------
 
 export type MediaHeader = {
@@ -185,7 +185,7 @@ export type BuildInteractiveInput = {
 	messageParamsJson?: string
 }
 
-/** Costruisce l'oggetto `interactiveMessage` (con nativeFlowMessage). */
+/** Builds the `interactiveMessage` object (with nativeFlowMessage). */
 export const buildInteractiveMessage = (input: BuildInteractiveInput) => {
 	const hasMedia = !!(input.media?.imageMessage || input.media?.videoMessage || input.media?.documentMessage)
 
@@ -217,7 +217,7 @@ export const buildInteractiveMessage = (input: BuildInteractiveInput) => {
 	return message
 }
 
-/** Avvolge l'interactiveMessage nella struttura che i client si aspettano. */
+/** Wraps the `interactiveMessage` in the structure expected by clients. */
 export const wrapInteractiveMessage = (interactiveMessage: Record<string, any>) => ({
 	viewOnceMessage: {
 		message: {
@@ -230,7 +230,7 @@ export const wrapInteractiveMessage = (interactiveMessage: Record<string, any>) 
 	}
 })
 
-/** Vecchio `buttonsMessage` (solo quick reply). Usato solo con buttonsMode: 'legacy'. */
+/** Legacy `buttonsMessage` (quick replies only). Used only with buttonsMode: 'legacy'. */
 export const buildLegacyButtonsMessage = (input: {
 	body?: string
 	footer?: string
@@ -272,7 +272,7 @@ export const buildLegacyButtonsMessage = (input: {
 }
 
 // ---------------------------------------------------------------------------
-//  Nodi binari "biz": senza questi WhatsApp scarta/ignora i pulsanti
+//  "biz" binary nodes: without these, WhatsApp drops or ignores the buttons
 // ---------------------------------------------------------------------------
 
 const NATIVE_FLOW_SPECIALS = new Set([
@@ -285,11 +285,11 @@ const NATIVE_FLOW_SPECIALS = new Set([
 ])
 
 /**
- * Restituisce i nodi aggiuntivi da accodare allo stanza per un messaggio
- * interattivo, oppure [] se il messaggio non ne ha bisogno.
+ * Returns the extra nodes to append to the stanza for an interactive message, or
+ * `[]` if the message does not need any.
  *
- * @param message messaggio già "normalizzato" (senza wrapper viewOnce)
- * @param isPrivateChat true per chat 1:1 (non gruppo/broadcast)
+ * @param message Message already normalized (without a viewOnce wrapper).
+ * @param isPrivateChat `true` for a 1:1 chat (not a group or broadcast).
  */
 export const getInteractiveBizNodes = (message: any, isPrivateChat: boolean): BinaryNode[] => {
 	if (!isObj(message)) return []
@@ -343,7 +343,7 @@ export const getInteractiveBizNodes = (message: any, isPrivateChat: boolean): Bi
 	return nodes
 }
 
-/** Estrae l'id del pulsante premuto da un messaggio di risposta (utile ai bot). */
+/** Extracts the selected button ID from a reply message (useful for bots). */
 export const getButtonReplyId = (message: any): string | null => {
 	if (!isObj(message)) return null
 	const m = message

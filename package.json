@@ -2,7 +2,7 @@
   "name": "@aeqm/baileys",
   "type": "module",
   "version": "1.0.0",
-  "description": "Fork di Baileys (WhiskeySockets 7.0.0-rc14) con pulsanti e compatibilità ChatUnity per bot come Hastur",
+  "description": "Baileys fork (WhiskeySockets 7.0.0-rc14) with buttons and ChatUnity compatibility for bots such as Hastur",
   "keywords": [
     "whatsapp",
     "baileys",

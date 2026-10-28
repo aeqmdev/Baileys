@@ -1406,8 +1406,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 						}
 					} as BinaryNode)
 				} else {
-					// [@aeqm/baileys] pulsanti / liste / messaggi interattivi: servono i nodi "biz"
-					// altrimenti WhatsApp non li mostra.
+					// [@aeqm/baileys] buttons / lists / interactive messages require "biz" nodes
+					// otherwise WhatsApp does not render them.
 					const isPrivateChat = !isJidGroup(jid) && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid'))
 					additionalNodes.push(...getInteractiveBizNodes(normalizeMessageContent(fullMsg.message), isPrivateChat))
 				}

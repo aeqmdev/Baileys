@@ -1,9 +1,9 @@
 /**
- * @aeqm/baileys — ultimo strato del socket.
+ * @aeqm/baileys — the final socket layer.
  *
- * Aggiunge sopra il Baileys 7.x ufficiale tutto ciò che i bot scritti per le fork
- * ChatUnity si aspettano (vedi Utils/aeqm-compat.ts per l'elenco). Ogni compatibilità
- * si può spegnere dalla config di makeWASocket:
+ * Adds everything bots written for ChatUnity forks expect on top of official Baileys 7.x
+ * (see Utils/aeqm-compat.ts for the list). Each compatibility feature can be disabled
+ * through the makeWASocket config:
  *
  *   makeWASocket({
  *     ...,
@@ -11,7 +11,7 @@
  *       legacyParticipants: true,   // group-participants.update -> participants: string[]
  *       legacyPin: true,            // sendMessage({ pin: { key, type }, time })
  *       lidHelpers: true,           // sock.getPNById / sock.getLIDById
- *       buttonsMode: 'native_flow'  // modalità predefinita dei pulsanti
+ *       buttonsMode: 'native_flow'  // default button mode
  *     }
  *   })
  */
@@ -33,15 +33,15 @@ const DEFAULTS: Required<AeqmConfig> = {
 	buttonsMode: 'native_flow'
 }
 
-/** Metodi aggiunti al socket da `lidHelpers` (attivo per default); assenti con `lidHelpers: false`. */
+/** Methods added to the socket by `lidHelpers` (enabled by default); absent when `lidHelpers: false`. */
 export type AeqmSocketExtensions = {
-	/** LID -> JID del numero di telefono (senza device). `null` se non è un LID/numero o la mappatura non lo conosce. */
+	/** LID -> phone-number JID (without a device suffix). `null` if the input is neither a LID nor a phone number, or if no mapping is known. */
 	getPNById: (jid: string) => Promise<string | null>
-	/** JID del numero di telefono -> LID (senza device). `null` se non è un numero/LID o la mappatura non lo conosce. */
+	/** Phone-number JID -> LID (without a device suffix). `null` if the input is neither a phone number nor a LID, or if no mapping is known. */
 	getLIDById: (jid: string) => Promise<string | null>
 }
 
-// Eventi il cui payload viene trasformato prima di arrivare al listener dell'utente.
+// Events whose payload is transformed before it reaches the user listener.
 type Transformer = (data: any) => any
 
 export const applyAeqmCompat = <S extends Record<string, any>>(
@@ -51,7 +51,7 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 	const cfg = { ...DEFAULTS, ...(userConfig || {}) }
 
 	// ---------------------------------------------------------------------------
-	//  1) Eventi: group-participants.update con participants come stringhe
+	//  1) Events: group-participants.update with participants as strings
 	// ---------------------------------------------------------------------------
 	const transformers: Record<string, Transformer> = {}
 	if (cfg.legacyParticipants) {
@@ -64,7 +64,7 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 		const originalOff = ev.off.bind(ev)
 		const originalProcess = typeof ev.process === 'function' ? ev.process.bind(ev) : undefined
 
-		// listener originale -> listener "avvolto" (per poter fare off() correttamente)
+		// original listener -> wrapped listener (so off() can remove it correctly)
 		const wrappedListeners = new WeakMap<(...a: any[]) => any, (...a: any[]) => any>()
 
 		ev.on = (event: string, listener: (...a: any[]) => any) => {
@@ -104,12 +104,12 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 	const extra: Record<string, any> = {}
 
 	// ---------------------------------------------------------------------------
-	//  2) Helper LID <-> numero (usati da Hastur: getPNById / getLIDById)
+	//  2) LID helpers (used by Hastur: getPNById / getLIDById)
 	// ---------------------------------------------------------------------------
 	if (cfg.lidHelpers) {
 		const mapping = () => (sock as any).signalRepository?.lidMapping
 
-		/** LID -> JID del numero di telefono. Se è già un numero lo restituisce; altrimenti null. */
+		/** LID -> phone-number JID. Returns the input if it is already a phone number; otherwise, returns null when unresolved. */
 		extra.getPNById = async (jid: string): Promise<string | null> => {
 			if (!jid) return null
 			const clean = stripDevice(jid)
@@ -120,7 +120,7 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 			return isPnJid(out) ? out : null
 		}
 
-		/** JID del numero di telefono -> LID. Se è già un LID lo restituisce; altrimenti null. */
+		/** Phone-number JID -> LID. Returns the input if it is already a LID; otherwise, returns null when unresolved. */
 		extra.getLIDById = async (jid: string): Promise<string | null> => {
 			if (!jid) return null
 			const clean = stripDevice(jid)
@@ -133,7 +133,7 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 	}
 
 	// ---------------------------------------------------------------------------
-	//  3) sendMessage: forma alternativa di pin + modalità pulsanti predefinita
+	//  3) sendMessage: alternate pin format + default button mode
 	// ---------------------------------------------------------------------------
 	if (typeof sock.sendMessage === 'function') {
 		const originalSend = sock.sendMessage.bind(sock)

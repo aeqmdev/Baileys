@@ -1618,7 +1618,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 				}
 			}
 
-			// [@aeqm/baileys] campi "legacy" senderPn / senderLid / participantLid sulla chiave
+			// [@aeqm/baileys] add the "legacy" senderPn / senderLid / participantLid fields to the key
 			await enrichLegacyKeyFields(msg.key, lid => signalRepository.lidMapping.getPNForLID(lid))
 
 			await messageMutex.mutex(async () => {

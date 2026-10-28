@@ -405,8 +405,8 @@ function hasOptionalProperty<T, K extends PropertyKey>(obj: T, key: K): obj is W
 }
 
 /**
- * [@aeqm/baileys] Messaggi con pulsanti / liste / bottoni interattivi.
- * Vedi src/Utils/aeqm-buttons.ts per i formati accettati.
+ * [@aeqm/baileys] Messages with buttons, lists, and interactive buttons.
+ * See src/Utils/aeqm-buttons.ts for supported formats.
  */
 const generateInteractiveContent = async (message: any, options: MessageContentGenerationOptions) => {
 	const buttons = collectNativeFlowButtons(message)
@@ -414,7 +414,7 @@ const generateInteractiveContent = async (message: any, options: MessageContentG
 		throw new Boom('buttons/interactiveButtons/sections must contain at least one valid button', { statusCode: 400 })
 	}
 
-	// Header multimediale (image / video / document), opzionale.
+	// Optional media header (image / video / document).
 	const media: MediaHeader = {}
 	for (const kind of ['image', 'video', 'document'] as const) {
 		if (message[kind] !== undefined && message[kind] !== null) {

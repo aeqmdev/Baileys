@@ -16,7 +16,7 @@ import type { SocketConfig } from './Socket'
 
 export type UserFacingSocketConfig = Partial<SocketConfig> & {
 	auth: AuthenticationState
-	/** [@aeqm/baileys] opzioni del livello di compatibilità (vedi Socket/aeqm.ts) */
+	/** [@aeqm/baileys] Compatibility-layer options (see Socket/aeqm.ts). */
 	aeqm?: import('../Socket/aeqm').AeqmConfig
 }
 

@@ -1,10 +1,10 @@
-# Non rilasciato
-- Documentazione della fork integrata nel README principale; `README_AEQM.md` e `.github/README.md` ora rimandano a quello
-- Tipi: `participantsInfo` opzionale in `group-participants.update`; `getPNById`/`getLIDById` presenti nel tipo del socket (opzionali, assenti con `lidHelpers: false`)
-- `test:e2e` diviso in `test:e2e:mock` (deroga TLS limitata al processo che parla col mock) e `test:e2e:live` (verifica TLS attiva)
-- Nuovi test: eventi partecipanti, campi LID/PN, helper LID, pin, `buttonsMode`, contratto documentazione/tipi dei pulsanti
+# Unreleased
+- Fork documentation integrated into the main README; `README_AEQM.md` and `.github/README.md` now point to it
+- Types: optional `participantsInfo` in `group-participants.update`; `getPNById`/`getLIDById` added to the socket type (optional and absent when `lidHelpers: false`)
+- `test:e2e` split into `test:e2e:mock` (TLS bypass limited to the process connecting to the mock) and `test:e2e:live` (TLS verification enabled)
+- New tests: participant events, LID/PN fields, LID helpers, pinning, `buttonsMode`, and the button documentation/type contract
 
 # 1.0.0
 - Base: Baileys 7.0.0-rc14
-- Pulsanti, liste, messaggi interattivi (nativeFlow) con nodi biz
-- Compatibilità ChatUnity: key.senderPn/senderLid/participantLid, getPNById/getLIDById, participant.jid, participants string[], pin
+- Buttons, lists, and interactive messages (`nativeFlow`) with biz nodes
+- ChatUnity compatibility: key.senderPn/senderLid/participantLid, getPNById/getLIDById, participant.jid, string[] participants, and pinning

@@ -10,7 +10,7 @@ const makeWASocket = (config: UserFacingSocketConfig) => {
 		...config
 	}
 
-	// [@aeqm/baileys] strato di compatibilità (pulsanti, LID helpers, eventi legacy)
+	// [@aeqm/baileys] compatibility layer (buttons, LID helpers, legacy events)
 	return applyAeqmCompat(makeCommunitiesSocket(newConfig), config.aeqm)
 }
 

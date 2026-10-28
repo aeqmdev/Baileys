@@ -21,7 +21,7 @@ export type WAMessageKey = proto.IMessageKey & {
 	remoteJidAlt?: string
 	remoteJidUsername?: string
 	participantAlt?: string
-	/** [@aeqm/baileys] campi compatibili con le fork ChatUnity */
+	/** [@aeqm/baileys] fields compatible with ChatUnity forks */
 	senderPn?: string
 	senderLid?: string
 	participantLid?: string
@@ -239,14 +239,14 @@ export type WASendableProduct = Omit<proto.Message.ProductMessage.IProductSnapsh
 }
 
 
-/** [@aeqm/baileys] pulsante "quick reply" in stile ChatUnity/Baileys legacy */
+/** [@aeqm/baileys] ChatUnity/Baileys legacy-style quick-reply button. */
 export type AeqmLegacyButton = {
 	buttonId: string
 	buttonText: { displayText: string }
 	type?: number
 }
 
-/** [@aeqm/baileys] pulsanti interattivi estesi (vedi Utils/aeqm-buttons.ts) */
+/** [@aeqm/baileys] Extended interactive buttons (see Utils/aeqm-buttons.ts). */
 export type AeqmInteractiveButton =
 	| { type: 'reply' | 'quick_reply'; text: string; id: string }
 	| { type: 'url' | 'cta_url'; text: string; url: string; merchantUrl?: string }
@@ -261,7 +261,7 @@ export type AeqmListSection = {
 	rows: { title: string; description?: string; rowId?: string; id?: string; header?: string }[]
 }
 
-/** [@aeqm/baileys] messaggio con pulsanti / lista / media + pulsanti */
+/** [@aeqm/baileys] Message with buttons, a list, or media with buttons. */
 export type AeqmInteractiveContent = {
 	text?: string
 	caption?: string
@@ -270,10 +270,10 @@ export type AeqmInteractiveContent = {
 	subtitle?: string
 	buttons?: AeqmLegacyButton[]
 	interactiveButtons?: AeqmInteractiveButton[]
-	/** lista a tendina: richiede anche buttonText (etichetta del pulsante che apre la lista) */
+	/** Dropdown list; also requires buttonText (the label on the button that opens the list). */
 	sections?: AeqmListSection[]
 	buttonText?: string
-	/** 'native_flow' (default) oppure 'legacy' (vecchio buttonsMessage) */
+	/** 'native_flow' (default) or 'legacy' (legacy buttonsMessage). */
 	buttonsMode?: 'native_flow' | 'legacy'
 	image?: WAMediaUpload
 	video?: WAMediaUpload
