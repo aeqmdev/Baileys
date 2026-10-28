@@ -7,4 +7,4 @@
 # 1.0.0
 - Base: Baileys 7.0.0-rc14
 - Buttons, lists, and interactive messages (`nativeFlow`) with biz nodes
-- ChatUnity compatibility: key.senderPn/senderLid/participantLid, getPNById/getLIDById, participant.jid, string[] participants, and pinning
+- Compatibility helpers: key.senderPn/senderLid/participantLid, getPNById/getLIDById, participant.jid, string[] participants, and pinning

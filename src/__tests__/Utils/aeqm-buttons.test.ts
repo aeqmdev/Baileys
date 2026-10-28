@@ -78,7 +78,7 @@ describe('toNativeFlowButton', () => {
 		expect(params.sections[0]?.rows[0]).toEqual({ header: '', title: 'r1', description: 'd', id: 'id1' })
 	})
 
-	it('maps the documented ChatUnity quick reply form to quick_reply', () => {
+	it('maps the documented legacy quick reply form to quick_reply', () => {
 		const legacy: AeqmLegacyButton = { buttonId: '.menu admin', buttonText: { displayText: 'Admin' } }
 
 		const converted = toNativeFlowButton(legacy)

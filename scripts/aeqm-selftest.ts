@@ -9,7 +9,7 @@ import {
 } from '../src/Utils/aeqm-compat'
 import { EventEmitter } from 'node:events'
 
-// --- Hastur-style buttons
+// --- Legacy quick-reply buttons
 const content = { text: 'hello', footer: 'f', buttons: [{ buttonId: '.menu admin', buttonText: { displayText: 'Admin' } }] }
 assert.ok(hasInteractiveContent(content))
 assert.ok(!hasInteractiveContent({ text: 'x' }))

@@ -21,7 +21,7 @@ export type WAMessageKey = proto.IMessageKey & {
 	remoteJidAlt?: string
 	remoteJidUsername?: string
 	participantAlt?: string
-	/** [@aeqm/baileys] fields compatible with ChatUnity forks */
+	/** [@aeqm/baileys] additional sender addressing fields */
 	senderPn?: string
 	senderLid?: string
 	participantLid?: string
@@ -239,7 +239,7 @@ export type WASendableProduct = Omit<proto.Message.ProductMessage.IProductSnapsh
 }
 
 
-/** [@aeqm/baileys] ChatUnity/Baileys legacy-style quick-reply button. */
+/** [@aeqm/baileys] legacy-style quick-reply button. */
 export type AeqmLegacyButton = {
 	buttonId: string
 	buttonText: { displayText: string }
@@ -327,7 +327,7 @@ export type AnyRegularMessageContent = (
 			listReply: Omit<proto.Message.IListResponseMessage, 'contextInfo'>
 	  }
 	| {
-			/** [@aeqm/baileys] forma alternativa { pin: { key, type }, time } usata dalle fork ChatUnity */
+			/** [@aeqm/baileys] alternate `{ pin: { key, type }, time }` format */
 			pin: { key: WAMessageKey; type: proto.PinInChat.Type; time?: 86400 | 604800 | 2592000 }
 			time?: 86400 | 604800 | 2592000
 	  }

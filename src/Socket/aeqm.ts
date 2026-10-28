@@ -1,7 +1,7 @@
 /**
  * @aeqm/baileys — the final socket layer.
  *
- * Adds everything bots written for ChatUnity forks expect on top of official Baileys 7.x
+ * Adds compatibility helpers on top of official Baileys 7.x
  * (see Utils/aeqm-compat.ts for the list). Each compatibility feature can be disabled
  * through the makeWASocket config:
  *
@@ -104,7 +104,7 @@ export const applyAeqmCompat = <S extends Record<string, any>>(
 	const extra: Record<string, any> = {}
 
 	// ---------------------------------------------------------------------------
-	//  2) LID helpers (used by Hastur: getPNById / getLIDById)
+	//  2) LID helper methods (getPNById / getLIDById)
 	// ---------------------------------------------------------------------------
 	if (cfg.lidHelpers) {
 		const mapping = () => (sock as any).signalRepository?.lidMapping

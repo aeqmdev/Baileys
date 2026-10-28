@@ -8,7 +8,7 @@
  *
  * Formats accepted by sendMessage(jid, content):
  *
- *  1) ChatUnity-style quick-reply buttons (used by Hastur):
+ *  1) Quick-reply buttons in the legacy format:
  *       { text|caption, footer, buttons: [{ buttonId, buttonText: { displayText } }] }
  *     (also works with image/video/document headers)
  *
@@ -125,7 +125,7 @@ export const toNativeFlowButton = (b: any): NativeFlowButton | null => {
 		case 'reply':
 		case 'quick_reply':
 		default: {
-			// ChatUnity format: { buttonId, buttonText: { displayText } }
+			// Legacy format: { buttonId, buttonText: { displayText } }
 			// Short format:     { id, text }
 			const id = str(b.buttonId ?? b.id)
 			if (!text && !id) return null

@@ -4,8 +4,8 @@
  * This file imports nothing "heavy" (types only): its functions are pure, so they can be
  * tested without starting a socket.
  *
- * Why it exists: many bots (including Hastur) are written for "ChatUnity" forks and
- * similar projects, which expose the following in addition to official Baileys 7.x:
+ * Why it exists: some existing integrations expect these fields and formats in addition
+ * to official Baileys 7.x:
  *   - m.key.senderPn / m.key.senderLid / m.key.participantLid
  *   - group participants with the three fields id / lid / jid
  *   - group-participants.update with `participants` as an array of JID strings
@@ -125,7 +125,7 @@ export const toLegacyParticipantsUpdate = <U extends { participants: any[] }>(up
 
 /**
  * Accepts both the official format `{ pin: <key>, type, time }` and the format used by
- * ChatUnity forks: `{ pin: { key, type, time? }, time? }`.
+ * Legacy format: `{ pin: { key, type, time? }, time? }`.
  */
 export const normalizePinContent = (content: any): any => {
 	if (!content || typeof content !== 'object') return content

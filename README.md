@@ -1,7 +1,7 @@
 # @aeqm/baileys
 
 A personal fork of [Baileys](https://github.com/WhiskeySockets/Baileys), the TypeScript WebSocket library for WhatsApp Web, based on upstream **7.0.0-rc14**.
-It adds buttons, lists, interactive messages, and a compatibility layer for bots written for ChatUnity forks (such as Hastur).
+It adds buttons, lists, interactive messages, and compatibility helpers for existing bot integrations.
 MIT-licensed, like the original.
 
 > [!IMPORTANT]
@@ -78,9 +78,9 @@ In your code:
 import makeWASocket from '@aeqm/baileys'
 ```
 
-### Migrating from `@chatunity/baileys`
+### Migrating from another Baileys fork
 
-Replace `@chatunity/baileys` with `@aeqm/baileys` in your bot (`package.json`, `index.js`, `lib/pair.js`, `lib/message-utils.js`, and `lib/media-moderation.js`). The library does not print a banner at startup.
+Replace the previous Baileys package name with `@aeqm/baileys` in your bot's dependency list and imports. The library does not print a banner at startup.
 
 ## `aeqm` configuration
 
@@ -110,7 +110,7 @@ To disable a compatibility feature, explicitly pass `false`. Omitted options use
 ## `legacyParticipants` compatibility
 
 Upstream emits `group-participants.update` with `participants` as an array of participant **objects**.
-ChatUnity forks emit an array of **JID strings**, which is what bots written for those forks expect.
+Some existing integrations expect an array of **JID strings** instead.
 
 With `legacyParticipants` enabled (the default), listeners receive this payload:
 
@@ -136,7 +136,7 @@ const sock = makeWASocket({ auth: state, aeqm: { legacyParticipants: false } })
 
 **TypeScript.** The public types describe the upstream shape (`participants: GroupParticipant[]`) and declare `participantsInfo` as optional. With the default enabled, `participants` is `string[]` at runtime; in TypeScript projects, set `legacyParticipants: false` or read `participantsInfo` instead.
 
-**Why the default is `true`.** This fork is intended to replace `@chatunity/baileys` in bots that expect strings. With a default of `false`, those bots would break without changes. The trade-off is a mismatch with the TypeScript types; the options above provide a workaround. Reconsider this default if the fork no longer primarily serves those bots.
+**Why the default is `true`.** Some existing bots expect participant IDs as strings. With a default of `false`, those bots would break without changes. The trade-off is a mismatch with the TypeScript types; the options above provide a workaround. Reconsider this default if string-based participant compatibility is no longer needed.
 
 ## LID/PN fields and helpers
 
@@ -166,7 +166,7 @@ The `type` is `proto.PinInChat.Type`: `1` pins the message for everyone, `2` unp
 // Official format
 await sock.sendMessage(jid, { pin: message.key, type: 1, time: 604800 })
 
-// ChatUnity fork format (with `legacyPin` enabled, the default)
+// Nested compatibility format (with `legacyPin` enabled, the default)
 await sock.sendMessage(jid, { pin: { key: message.key, type: 1 }, time: 604800 })
 ```
 
@@ -177,7 +177,7 @@ The nested format is rewritten to the official format before sending. If `type` 
 Formats accepted by `sendMessage(jid, content)`:
 
 ```ts
-// 1) ChatUnity-style quick replies (also supports image / video / document headers)
+// 1) Quick replies (also supports image / video / document headers)
 await sock.sendMessage(jid, {
     text: 'Choose',
     footer: 'Footer',
